@@ -712,3 +712,146 @@ main {
     cursor: pointer;
   }
 }
+
+/* ---------- summaries ---------- */
+
+.summaries {
+  display: grid;
+  gap: 0.6rem;
+  border-block-start: 2px solid var(--line);
+  padding-block-start: 1rem;
+
+  & h2 {
+    margin: 0;
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--ink-faint);
+  }
+}
+
+.summary-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.generate {
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--paper);
+  background: var(--blue);
+  border: 2px solid var(--blue-light);
+  border-radius: var(--radius);
+  box-shadow: var(--lift);
+  padding: 0.45rem 0.9rem;
+  cursor: pointer;
+  margin-inline-start: auto;
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: progress;
+  }
+  &:active:not(:disabled) {
+    box-shadow: var(--lift-sm);
+    translate: 1px 1px;
+  }
+}
+
+.summary-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.5rem;
+}
+
+.summary {
+  background: var(--raised);
+  border: 2px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--lift);
+  overflow: hidden;
+
+  &.open {
+    border-color: var(--blue-mid);
+  }
+}
+
+.summary-head {
+  inline-size: 100%;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem;
+  font: inherit;
+  font-weight: 650;
+  color: var(--ink);
+  background: transparent;
+  border: 0;
+  padding: 0.7rem 0.85rem;
+  cursor: pointer;
+  text-align: start;
+
+  & small {
+    font-weight: 400;
+    font-size: 0.75rem;
+    color: var(--ink-dim);
+  }
+
+  &:hover {
+    background: var(--raised-high);
+  }
+}
+
+.summary-body {
+  padding: 0 0.85rem 0.85rem;
+  display: grid;
+  gap: 0.5rem;
+
+  & h3 {
+    margin: 0.3rem 0 0;
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--ink-faint);
+  }
+}
+
+.recap {
+  margin: 0;
+  font-size: 0.9rem;
+  color: var(--blue-light);
+  text-wrap: pretty;
+}
+
+.brief {
+  margin: 0;
+  font: inherit;
+  font-size: 0.85rem;
+  color: var(--ink-dim);
+  background: var(--paper);
+  border: 2px solid var(--line);
+  border-radius: var(--radius-sm);
+  padding: 0.7rem 0.8rem;
+  /* Model output is prose with its own line breaks; keep them, but wrap. */
+  white-space: pre-wrap;
+  overflow-x: auto;
+}
+
+.copy {
+  justify-self: start;
+  font: inherit;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--ink);
+  background: var(--raised-high);
+  border: 2px solid var(--line-strong);
+  border-radius: var(--radius-sm);
+  padding: 0.35rem 0.7rem;
+  cursor: pointer;
+}

@@ -18,6 +18,7 @@ import { dayFromSearch, searchForDay } from "./lib/url";
 import { createWriteQueue } from "./lib/writeQueue";
 import Trends from "./Trends";
 import Login from "./Login";
+import Summaries from "./Summaries";
 import type { WriteState } from "./lib/writeQueue";
 import { getDay, saveDay } from "./server/db";
 
@@ -291,6 +292,8 @@ function Journal() {
           </output>
 
           <Trends endDay={today} version={dataVersion()} />
+
+          <Summaries endDay={today} />
         </main>
       </Loading>
 

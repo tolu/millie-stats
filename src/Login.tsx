@@ -4,7 +4,7 @@ import { createSignal, Show } from "solid-js";
  * The only thing between the open internet and the journal — and, more to the
  * point, between the internet and an endpoint that spends Anthropic credits.
  */
-export default function Login(props: { onSuccess: () => void }) {
+export default function Login(props: { onSuccess: () => void; configured: boolean }) {
   const [busy, setBusy] = createSignal(false);
   const [failed, setFailed] = createSignal(false);
 
@@ -41,7 +41,15 @@ export default function Login(props: { onSuccess: () => void }) {
       <img src="/millie-hero.webp" alt="Millie" width="320" height="239" />
       <h1>Millie</h1>
       <p class="muted">Pinnedyr og Border Collie</p>
-      <form onSubmit={(e) => void submit(e)}>
+      <Show
+        when={props.configured}
+        fallback={
+          <p class="login-error" role="alert">
+            Ikke satt opp ennå. Kjør: wrangler secret put APP_PASSPHRASE
+          </p>
+        }
+      >
+        <form onSubmit={(e) => void submit(e)}>
         <label>
           <span>Passord</span>
           <input
@@ -54,12 +62,13 @@ export default function Login(props: { onSuccess: () => void }) {
         <button type="submit" disabled={busy()}>
           {busy() ? "Sjekker…" : "Logg inn"}
         </button>
-        <Show when={failed()}>
-          <p class="login-error" role="alert">
-            Feil passord.
-          </p>
-        </Show>
-      </form>
+          <Show when={failed()}>
+            <p class="login-error" role="alert">
+              Feil passord.
+            </p>
+          </Show>
+        </form>
+      </Show>
     </div>
   );
 }

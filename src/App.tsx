@@ -27,6 +27,14 @@ const NOTE_DEBOUNCE_MS = 500;
 
 type AuthState = { authorised: boolean; configured: boolean };
 
+// Registering makes the app installable on Android; iOS needs only the
+// manifest. The worker itself caches nothing — see public/sw.js.
+if ("serviceWorker" in navigator) {
+  void navigator.serviceWorker.register("/sw.js").catch(() => {
+    // An unavailable service worker costs installability, nothing else.
+  });
+}
+
 export default function App() {
   const [auth, setAuth] = createSignal<AuthState | null>(null);
 
@@ -52,7 +60,10 @@ export default function App() {
         <div class="login" />
       </Match>
       <Match when={view() === "login"}>
-        <Login onSuccess={() => setAuth({ configured: true, authorised: true })} />
+        <Login
+          configured={auth()?.configured ?? false}
+          onSuccess={() => setAuth({ configured: true, authorised: true })}
+        />
       </Match>
       <Match when={view() === "journal"}>
         {/* A failed read must not take the whole page down. Without this a

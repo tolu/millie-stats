@@ -85,6 +85,72 @@ export async function saveDay(
   return { day, updatedAt };
 }
 
+export type SummaryPayload = {
+  readonly brief: string;
+  readonly recap: string;
+  readonly model: string;
+  readonly loggedDays: number;
+  readonly totalDays: number;
+};
+
+export type SummaryRecord = SummaryPayload & {
+  readonly id: string;
+  readonly from: string;
+  readonly to: string;
+  readonly createdAt: string;
+};
+
+type SummaryRow = {
+  id: string;
+  from_day: string;
+  to_day: string;
+  data: string;
+  created_at: string;
+};
+
+function toSummary(row: SummaryRow): SummaryRecord {
+  const payload = JSON.parse(row.data) as SummaryPayload;
+  return {
+    id: row.id,
+    from: row.from_day,
+    to: row.to_day,
+    createdAt: row.created_at,
+    ...payload,
+  };
+}
+
+/** Every generated summary is kept — a refresh must never lose one, and the
+ *  history is a record of what was sent to the vet and when. */
+export async function saveSummary(
+  from: string,
+  to: string,
+  payload: SummaryPayload,
+): Promise<SummaryRecord> {
+  assertDay(from, "from");
+  assertDay(to, "to");
+  const id = crypto.randomUUID();
+  const createdAt = new Date().toISOString();
+  await (await db())
+    .prepare(
+      `INSERT INTO summaries (id, from_day, to_day, data, created_at)
+       VALUES (?1, ?2, ?3, ?4, ?5)`,
+    )
+    .bind(id, from, to, JSON.stringify(payload), createdAt)
+    .run();
+  return { id, from, to, createdAt, ...payload };
+}
+
+export async function listSummaries(limit = 20): Promise<SummaryRecord[]> {
+  const { results } = await (await db())
+    .prepare(
+      `SELECT id, from_day, to_day, data, created_at FROM summaries
+       ORDER BY created_at DESC LIMIT ?1`,
+    )
+    .bind(Math.min(Math.max(1, limit), 100))
+    .all<SummaryRow>();
+  return results.map(toSummary);
+}
+
 /** Removes a day entirely, returning it to "never logged". */
 export async function clearDay(day: string): Promise<void> {
   assertDay(day, "day");

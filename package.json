@@ -13,8 +13,10 @@
     "db:remote": "wrangler d1 execute millie --remote --file"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.121.0",
     "@solidjs/web": "2.0.0-rc.3",
-    "solid-js": "2.0.0-rc.3"
+    "solid-js": "2.0.0-rc.3",
+    "zod": "^4.4.3"
   },
   "devDependencies": {
     "@cloudflare/vite-plugin": "^1.0.0",

@@ -590,3 +590,125 @@ main {
     outline-offset: 1px;
   }
 }
+
+/* ---------- login ---------- */
+
+.login {
+  max-width: 22rem;
+  margin-inline: auto;
+  padding: 3rem 1rem;
+  text-align: center;
+  display: grid;
+  justify-items: center;
+  gap: 0.35rem;
+
+  /* The artwork gets one place to be shown at size. */
+  & img {
+    inline-size: min(100%, 20rem);
+    block-size: auto;
+    margin-block-end: 0.5rem;
+  }
+
+  & h1 {
+    margin: 0;
+    font-size: 1.6rem;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+  }
+
+  & form {
+    margin-block-start: 1.5rem;
+    inline-size: 100%;
+    display: grid;
+    gap: 0.75rem;
+  }
+
+  & label {
+    display: grid;
+    gap: 0.35rem;
+    text-align: start;
+
+    & span {
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--ink-faint);
+    }
+  }
+
+  & input {
+    font: inherit;
+    color: var(--ink);
+    background: var(--raised);
+    border: 2px solid var(--line);
+    border-radius: var(--radius);
+    box-shadow: var(--lift);
+    padding: 0.65rem 0.8rem;
+
+    &:focus-visible {
+      outline: 2px solid var(--blue-light);
+      outline-offset: 2px;
+      border-color: var(--blue-mid);
+    }
+  }
+
+  & button {
+    font: inherit;
+    font-weight: 700;
+    color: var(--paper);
+    background: var(--blue);
+    border: 2px solid var(--blue-light);
+    border-radius: var(--radius);
+    box-shadow: var(--lift);
+    padding: 0.65rem 0.8rem;
+    cursor: pointer;
+
+    &:disabled {
+      opacity: 0.6;
+      cursor: progress;
+    }
+    &:active:not(:disabled) {
+      box-shadow: var(--lift-sm);
+      translate: 1px 1px;
+    }
+  }
+}
+
+.login-error {
+  margin: 0;
+  color: var(--danger);
+  font-size: 0.85rem;
+}
+
+/* ---------- failure ---------- */
+
+.failure {
+  margin: 2rem auto;
+  max-width: 24rem;
+  text-align: center;
+  display: grid;
+  gap: 0.6rem;
+  justify-items: center;
+  padding: 1.25rem;
+  background: var(--raised);
+  border: 2px solid var(--danger);
+  border-radius: var(--radius);
+  box-shadow: var(--lift);
+
+  & h2 {
+    margin: 0;
+    font-size: 1rem;
+  }
+
+  & button {
+    font: inherit;
+    font-weight: 700;
+    color: var(--paper);
+    background: var(--blue);
+    border: 2px solid var(--blue-light);
+    border-radius: var(--radius);
+    padding: 0.5rem 1rem;
+    cursor: pointer;
+  }
+}

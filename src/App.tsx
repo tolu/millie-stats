@@ -1,4 +1,14 @@
-import { createMemo, createSignal, For, Loading, onCleanup, untrack } from "solid-js";
+import {
+  createMemo,
+  createSignal,
+  For,
+  Errored,
+  Loading,
+  Match,
+  onCleanup,
+  Switch,
+  untrack,
+} from "solid-js";
 import "./styles.css";
 import { SYMPTOMS } from "./symptoms";
 import { addDays, formatLong, osloDay } from "./lib/date";
@@ -7,13 +17,73 @@ import type { DayEntry } from "./lib/entry";
 import { dayFromSearch, searchForDay } from "./lib/url";
 import { createWriteQueue } from "./lib/writeQueue";
 import Trends from "./Trends";
+import Login from "./Login";
 import type { WriteState } from "./lib/writeQueue";
 import { getDay, saveDay } from "./server/db";
 
 /** Typing shouldn't fire a write per keystroke. Ticking a box should. */
 const NOTE_DEBOUNCE_MS = 500;
 
+type AuthState = { authorised: boolean; configured: boolean };
+
 export default function App() {
+  const [auth, setAuth] = createSignal<AuthState | null>(null);
+
+  // Asked once on boot. The document shell is a static prerendered file, so it
+  // cannot carry per-request state — the client has to discover it.
+  void fetch("/_auth")
+    .then((r) => r.json() as Promise<AuthState>)
+    .then(setAuth)
+    .catch(() => setAuth({ authorised: false, configured: true }));
+
+  // An explicit three-state view rather than nested <Show>: the nested form
+  // kept the login on screen after a successful sign-in, because the outer
+  // condition stayed truthy and its callback never re-evaluated.
+  const view = createMemo(() => {
+    const state = auth();
+    if (!state) return "checking" as const;
+    return state.authorised ? ("journal" as const) : ("login" as const);
+  });
+
+  return (
+    <Switch>
+      <Match when={view() === "checking"}>
+        <div class="login" />
+      </Match>
+      <Match when={view() === "login"}>
+        <Login onSuccess={() => setAuth({ configured: true, authorised: true })} />
+      </Match>
+      <Match when={view() === "journal"}>
+        {/* A failed read must not take the whole page down. Without this a
+            single database hiccup replaces the app with a blank error page and
+            no way back. */}
+        <Errored fallback={(error, reset) => <Failure error={error} reset={reset} />}>
+          <Journal />
+        </Errored>
+      </Match>
+    </Switch>
+  );
+}
+
+function Failure(props: { error: unknown; reset: () => void }) {
+  const message = createMemo(() => {
+    const raw = props.error;
+    const value = typeof raw === "function" ? (raw as () => unknown)() : raw;
+    return value instanceof Error ? value.message : String(value);
+  });
+
+  return (
+    <div class="failure" role="alert">
+      <h2>Noe gikk galt</h2>
+      <p class="muted">{message()}</p>
+      <button type="button" onClick={() => props.reset()}>
+        Prøv igjen
+      </button>
+    </div>
+  );
+}
+
+function Journal() {
   const today = osloDay();
   const [day, setDayRaw] = createSignal(dayFromSearch(location.search, today));
   const [status, setStatus] = createSignal<WriteState>("idle");

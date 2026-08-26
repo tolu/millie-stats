@@ -6,6 +6,7 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
+    "dev:worker": "wrangler dev --config dist/server/wrangler.json --persist-to .wrangler/state",
     "test": "vitest run",
     "deploy": "npm run build && wrangler deploy",
     "db:local": "wrangler d1 execute millie --local --file",

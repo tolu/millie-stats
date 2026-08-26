@@ -1,0 +1,21 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`buildUserMessage > is stable for a fixed input 1`] = `
+"## Perioden det skal oppsummeres
+
+2026-08-24 til 2026-08-26 (3 dager, 2 ført, 1 ikke ført)
+dato | ukedag | Gnikking | Napping | Lydsensitiv | Slow walk | notat
+2026-08-24 | man. | nei | JA | nei | nei | nappet mye etter turen
+2026-08-25 | tir. | ? | ? | ? | ? | IKKE FØRT
+2026-08-26 | ons. | nei | nei | nei | nei | -
+
+## Forrige like lange periode, kun til sammenligning
+
+2026-08-21 til 2026-08-23 (3 dager, 1 ført, 2 ikke ført)
+dato | ukedag | Gnikking | Napping | Lydsensitiv | Slow walk | notat
+2026-08-21 | fre. | nei | JA | nei | nei | nappet mye etter turen
+2026-08-22 | lør. | ? | ? | ? | ? | IKKE FØRT
+2026-08-23 | søn. | ? | ? | ? | ? | IKKE FØRT
+
+Oppsummer den første perioden. Bruk den andre bare til å beskrive endring."
+`;

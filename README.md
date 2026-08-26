@@ -65,6 +65,17 @@ npm run build && npm run dev:worker
 keeps its local D1 under `dist/`, and any `rm -rf dist` silently destroys the
 test database.
 
+## Fake data for looking at the charts
+
+```bash
+node scripts/seed-dev.mjs 2026-08-26 > /tmp/seed.sql
+npx wrangler d1 execute millie --local --file /tmp/seed.sql
+```
+
+120 deterministic days with unlogged gaps and a rising "napping" trend in the
+last three weeks — enough to check that gaps render differently from
+logged-clear days and that the summary notices the trend. Local only.
+
 ## Things worth knowing before changing this
 
 - **An unlogged day is `null`, never `0`.** A missing row means nobody filled

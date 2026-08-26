@@ -1,0 +1,405 @@
+/* Ink-and-goggles, dark.
+ *
+ * Taken from the artwork: heavy comic outlines, cel-shaded flat fills, and the
+ * blue of the goggles as the only accent. Inverted for dark — the line work
+ * that was near-black on paper is a cool grey on near-black here, and the
+ * goggle blue does all the signalling.
+ *
+ * Targets current Chrome and Safari only, so modern primitives are used
+ * directly: nesting, :has(), color-mix(), field-sizing, popover, @property.
+ */
+
+:root {
+  color-scheme: dark;
+
+  --paper: #0d0f12;
+  --raised: #151a20;
+  --raised-high: #1c232b;
+  --line: #2b333d;
+  --line-strong: #3d4753;
+
+  --ink: #e7ecf2;
+  --ink-dim: #94a0ae;
+  --ink-faint: #5d6773;
+
+  /* The goggles. */
+  --blue: #5b93cc;
+  --blue-light: #9fc4e3;
+  --blue-mid: #4a7fb5;
+  --blue-deep: #2b4d70;
+
+  --danger: #d97070;
+
+  --radius: 12px;
+  --radius-sm: 8px;
+  /* The cel-shaded hard shadow. No blur — comic ink has no falloff. */
+  --lift: 3px 3px 0 #000;
+  --lift-sm: 2px 2px 0 #000;
+
+  --gap: 0.75rem;
+
+  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  font-synthesis: none;
+  -webkit-text-size-adjust: 100%;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  /* A faint vignette so the cards read as lit from the front. */
+  background-image: radial-gradient(
+    120% 80% at 50% 0%,
+    color-mix(in oklab, var(--blue-deep) 16%, transparent),
+    transparent 70%
+  );
+  background-attachment: fixed;
+  min-height: 100dvh;
+  line-height: 1.45;
+}
+
+.shell {
+  max-width: 34rem;
+  margin-inline: auto;
+  padding: 1rem 1rem 4rem;
+  display: grid;
+  gap: 1.25rem;
+}
+
+/* ---------- header ---------- */
+
+.masthead {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.mark {
+  inline-size: 56px;
+  block-size: 56px;
+  border-radius: 50%;
+  background: var(--ink);
+  border: 2px solid var(--line-strong);
+  box-shadow: var(--lift);
+  object-fit: cover;
+  flex: none;
+}
+
+.masthead h1 {
+  margin: 0;
+  font-size: 1.35rem;
+  font-weight: 800;
+  letter-spacing: -0.015em;
+}
+
+.masthead p {
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--ink-dim);
+}
+
+.icon-button {
+  margin-inline-start: auto;
+  inline-size: 2rem;
+  block-size: 2rem;
+  border-radius: 50%;
+  border: 2px solid var(--line);
+  background: var(--raised);
+  color: var(--ink-dim);
+  font-weight: 700;
+  cursor: pointer;
+  flex: none;
+
+  &:hover {
+    color: var(--ink);
+    border-color: var(--line-strong);
+  }
+}
+
+/* ---------- date navigation ---------- */
+
+.datenav {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: var(--raised);
+  border: 2px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--lift);
+  padding: 0.4rem;
+
+  & button {
+    font: inherit;
+    color: var(--ink);
+    background: transparent;
+    border: 0;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    padding: 0.45rem 0.6rem;
+
+    &:hover:not(:disabled) {
+      background: var(--raised-high);
+    }
+    &:disabled {
+      color: var(--ink-faint);
+      cursor: not-allowed;
+    }
+  }
+}
+
+.datenav .chevron {
+  font-size: 1.25rem;
+  line-height: 1;
+  padding-inline: 0.7rem;
+  flex: none;
+}
+
+.datenav .current {
+  flex: 1;
+  text-align: center;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+  /* The day label is what changes, so it carries the view transition. */
+  view-transition-name: current-day;
+}
+
+.datenav .today {
+  flex: none;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--blue-light);
+  border: 2px solid var(--blue-deep);
+  background: color-mix(in oklab, var(--blue) 12%, transparent);
+}
+
+/* The native picker is driven by showPicker(); the input itself never shows. */
+.datenav input[type="date"] {
+  position: absolute;
+  inline-size: 0;
+  block-size: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* ---------- symptoms ---------- */
+
+.symptoms {
+  border: 0;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: var(--gap);
+}
+
+.symptoms legend {
+  padding: 0;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--ink-faint);
+  margin-block-end: 0.5rem;
+}
+
+.symptom {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: 0 0.75rem;
+  padding: 0.7rem 0.85rem;
+  background: var(--raised);
+  border: 2px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--lift);
+  cursor: pointer;
+  transition:
+    border-color 0.12s,
+    background-color 0.12s;
+
+  /* :has() lets the whole row respond to its own checkbox. */
+  &:has(:checked) {
+    border-color: var(--blue-mid);
+    background: color-mix(in oklab, var(--blue) 13%, var(--raised));
+  }
+
+  &:has(:focus-visible) {
+    outline: 2px solid var(--blue-light);
+    outline-offset: 2px;
+  }
+
+  &:active {
+    box-shadow: var(--lift-sm);
+    translate: 1px 1px;
+  }
+}
+
+.symptom input[type="checkbox"] {
+  appearance: none;
+  margin: 0;
+  inline-size: 1.6rem;
+  block-size: 1.6rem;
+  border: 2px solid var(--line-strong);
+  border-radius: var(--radius-sm);
+  background: var(--paper);
+  display: grid;
+  place-content: center;
+  cursor: pointer;
+  grid-row: span 2;
+
+  &::after {
+    content: "";
+    inline-size: 0.85rem;
+    block-size: 0.5rem;
+    border-inline-start: 3px solid var(--paper);
+    border-block-end: 3px solid var(--paper);
+    rotate: -45deg;
+    translate: 0 -2px;
+    scale: 0;
+    transition: scale 0.14s ease-out;
+  }
+
+  &:checked {
+    background: var(--blue);
+    border-color: var(--blue-light);
+  }
+
+  &:checked::after {
+    scale: 1;
+  }
+}
+
+.symptom .label {
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.symptom .help {
+  font-size: 0.8rem;
+  color: var(--ink-dim);
+  text-wrap: pretty;
+}
+
+/* ---------- note ---------- */
+
+.note {
+  display: grid;
+  gap: 0.4rem;
+
+  & > span {
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--ink-faint);
+  }
+
+  & textarea {
+    font: inherit;
+    color: var(--ink);
+    background: var(--raised);
+    border: 2px solid var(--line);
+    border-radius: var(--radius);
+    box-shadow: var(--lift);
+    padding: 0.7rem 0.85rem;
+    resize: none;
+    /* Grows with its content — no JS, no scrollbar. */
+    field-sizing: content;
+    min-block-size: 4.5rem;
+    max-block-size: 40vh;
+
+    &::placeholder {
+      color: var(--ink-faint);
+    }
+    &:focus-visible {
+      outline: 2px solid var(--blue-light);
+      outline-offset: 2px;
+      border-color: var(--blue-mid);
+    }
+  }
+}
+
+/* ---------- save status ---------- */
+
+.status {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-block-size: 1.2rem;
+  font-size: 0.78rem;
+  color: var(--ink-faint);
+
+  &[data-state="saving"] {
+    color: var(--ink-dim);
+  }
+  &[data-state="saved"] {
+    color: var(--blue-light);
+  }
+  &[data-state="error"] {
+    color: var(--danger);
+  }
+}
+
+/* ---------- info popover ---------- */
+
+[popover] {
+  margin: auto;
+  inline-size: min(30rem, calc(100vw - 2rem));
+  background: var(--raised);
+  color: var(--ink);
+  border: 2px solid var(--line-strong);
+  border-radius: var(--radius);
+  box-shadow: 5px 5px 0 #000;
+  padding: 1.1rem 1.25rem;
+
+  &::backdrop {
+    background: rgb(0 0 0 / 0.6);
+  }
+
+  & h2 {
+    margin: 0 0 0.5rem;
+    font-size: 1rem;
+  }
+
+  & dl {
+    margin: 0 0 0.75rem;
+    display: grid;
+    gap: 0.35rem;
+  }
+
+  & dt {
+    font-weight: 700;
+    font-size: 0.9rem;
+  }
+
+  & dd {
+    margin: 0 0 0.4rem;
+    font-size: 0.85rem;
+    color: var(--ink-dim);
+    text-wrap: pretty;
+  }
+
+  & p {
+    margin: 0;
+    font-size: 0.85rem;
+    color: var(--blue-light);
+    text-wrap: pretty;
+  }
+}
+
+/* Day changes crossfade rather than snapping. */
+@view-transition {
+  navigation: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::after {
+    transition-duration: 0.01ms !important;
+  }
+}

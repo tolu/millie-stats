@@ -62,6 +62,11 @@ body {
   line-height: 1.45;
 }
 
+main {
+  display: grid;
+  gap: 1rem;
+}
+
 .shell {
   max-width: 34rem;
   margin-inline: auto;
@@ -330,7 +335,9 @@ body {
   display: flex;
   align-items: center;
   gap: 0.4rem;
-  min-block-size: 1.2rem;
+  /* Reserved so a save does not shift the charts below. */
+  min-block-size: 1rem;
+  margin-block-start: -0.5rem;
   font-size: 0.78rem;
   color: var(--ink-faint);
 
@@ -401,5 +408,185 @@ body {
   *,
   *::after {
     transition-duration: 0.01ms !important;
+  }
+}
+
+/* ---------- trends ---------- */
+
+:root {
+  /* A never-logged cell: present enough to keep the grid rhythm, faint enough
+     that it never reads as data. */
+  --heat-empty: #1b2027;
+}
+
+.trends {
+  border-block-start: 2px solid var(--line);
+  padding-block-start: 1rem;
+}
+
+.trends-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.trends {
+  display: grid;
+  gap: 0.6rem;
+
+  & h2 {
+    margin: 0;
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--ink-faint);
+  }
+
+  & h3 {
+    margin: 0.5rem 0 0;
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--ink-faint);
+  }
+}
+
+.muted {
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--ink-dim);
+}
+
+.heat {
+  display: grid;
+  grid-template-columns: auto auto;
+  align-items: center;
+  column-gap: 0.5rem;
+  row-gap: 0.15rem;
+  background: var(--raised);
+  border: 2px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--lift);
+  padding: 0.75rem 0.85rem;
+}
+
+.heat-name {
+  font-size: 0.8rem;
+  font-weight: 650;
+}
+
+.heat-count {
+  font-size: 0.75rem;
+  color: var(--ink-dim);
+  font-variant-numeric: tabular-nums;
+  text-align: end;
+}
+
+.heat-strip {
+  grid-column: 1 / -1;
+  inline-size: 100%;
+  block-size: 13px;
+  margin-block-end: 0.5rem;
+  /* Cells are ~3px wide at 90 days; smoothing turns them to mush. */
+  shape-rendering: crispEdges;
+}
+
+.heat > :nth-last-child(1) {
+  margin-block-end: 0;
+}
+
+.sparks {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--gap);
+}
+
+.spark {
+  margin: 0;
+  padding: 0.6rem 0.7rem;
+  background: var(--raised);
+  border: 2px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--lift);
+
+  & figcaption {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0.4rem;
+    font-size: 0.75rem;
+    color: var(--ink-dim);
+    margin-block-end: 0.35rem;
+
+    & strong {
+      color: var(--blue-light);
+      font-variant-numeric: tabular-nums;
+    }
+  }
+}
+
+.spark-svg {
+  inline-size: 100%;
+  block-size: 34px;
+  overflow: visible;
+}
+
+.spark-base {
+  stroke: var(--line-strong);
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+
+.spark-line {
+  fill: none;
+  stroke: var(--blue);
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  /* Without this the horizontal squash from preserveAspectRatio="none" would
+     squash the stroke too, and the line would taper. */
+  vector-effect: non-scaling-stroke;
+}
+
+/* ---------- window toggle ---------- */
+
+.window-toggle {
+  display: flex;
+  gap: 0.25rem;
+  padding: 0.25rem;
+  background: var(--raised);
+  border: 2px solid var(--line);
+  border-radius: var(--radius);
+  inline-size: fit-content;
+
+  & label {
+    position: relative;
+    font-size: 0.78rem;
+    font-weight: 650;
+    color: var(--ink-dim);
+    padding: 0.3rem 0.75rem;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+  }
+
+  & input {
+    position: absolute;
+    opacity: 0;
+    inset: 0;
+    margin: 0;
+    cursor: pointer;
+  }
+
+  & label:has(:checked) {
+    background: color-mix(in oklab, var(--blue) 22%, var(--raised));
+    color: var(--ink);
+  }
+
+  & label:has(:focus-visible) {
+    outline: 2px solid var(--blue-light);
+    outline-offset: 1px;
   }
 }

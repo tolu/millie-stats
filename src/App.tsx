@@ -6,6 +6,7 @@ import { EMPTY_ENTRY, isFlagged, withFlag, withNote } from "./lib/entry";
 import type { DayEntry } from "./lib/entry";
 import { dayFromSearch, searchForDay } from "./lib/url";
 import { createWriteQueue } from "./lib/writeQueue";
+import Trends from "./Trends";
 import type { WriteState } from "./lib/writeQueue";
 import { getDay, saveDay } from "./server/db";
 
@@ -17,6 +18,9 @@ export default function App() {
   const [day, setDayRaw] = createSignal(dayFromSearch(location.search, today));
   const [status, setStatus] = createSignal<WriteState>("idle");
   const [error, setError] = createSignal("");
+  // Bumped on every successful save so the charts below reflect the edit that
+  // was just made, without refetching on every keystroke.
+  const [dataVersion, setDataVersion] = createSignal(0);
 
   // The optimistic layer: what the user has typed or ticked but which may not
   // have reached D1 yet. Tagged with its day so switching days never shows a
@@ -63,6 +67,7 @@ export default function App() {
     (state, message) => {
       setStatus(state);
       setError(message ?? "");
+      if (state === "saved") setDataVersion((n) => n + 1);
     },
   );
 
@@ -214,6 +219,8 @@ export default function App() {
           <output class="status" data-state={status()} aria-live="polite">
             {statusText()}
           </output>
+
+          <Trends endDay={today} version={dataVersion()} />
         </main>
       </Loading>
 

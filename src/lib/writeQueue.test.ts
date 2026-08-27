@@ -2,6 +2,9 @@ import { describe, expect, it, vi } from "vitest";
 import { createWriteQueue } from "./writeQueue";
 import type { WriteState } from "./writeQueue";
 
+// These assertions are about ordering, not latency, so every waitFor gets a
+// generous timeout: the default 1s can be missed on a loaded machine and turn
+// a correct queue into a red build.
 function deferred<T = void>() {
   let resolve!: (value: T) => void;
   let reject!: (reason: unknown) => void;
@@ -34,14 +37,14 @@ describe("createWriteQueue", () => {
     expect(landed).toEqual([]); // ...and still has to wait
 
     first.resolve();
-    await vi.waitFor(() => expect(landed).toEqual(["a", "b"]));
+    await vi.waitFor(() => expect(landed).toEqual(["a", "b"]), { timeout: 5000 });
   });
 
   it("reports saving then saved", async () => {
     const states: WriteState[] = [];
     const queue = createWriteQueue<string>(async () => {}, (s) => states.push(s));
     queue.push("x");
-    await vi.waitFor(() => expect(states).toContain("saved"));
+    await vi.waitFor(() => expect(states).toContain("saved"), { timeout: 5000 });
     expect(states[0]).toBe("saving");
   });
 
@@ -55,7 +58,7 @@ describe("createWriteQueue", () => {
     queue.push("y");
     expect(states.filter((s) => s === "saved")).toHaveLength(0);
     gate.resolve();
-    await vi.waitFor(() => expect(states.at(-1)).toBe("saved"));
+    await vi.waitFor(() => expect(states.at(-1)).toBe("saved"), { timeout: 5000 });
     // One "saved", not one per write.
     expect(states.filter((s) => s === "saved")).toHaveLength(1);
   });
@@ -71,7 +74,7 @@ describe("createWriteQueue", () => {
       },
     );
     queue.push("x");
-    await vi.waitFor(() => expect(captured).toBe("D1 unavailable"));
+    await vi.waitFor(() => expect(captured).toBe("D1 unavailable"), { timeout: 5000 });
   });
 
   it("still writes after detach — switching day must not discard typed input", async () => {
@@ -86,7 +89,9 @@ describe("createWriteQueue", () => {
     queue.push("note typed just before navigating");
     queue.detach();
     gate.resolve();
-    await vi.waitFor(() => expect(landed).toEqual(["note typed just before navigating"]));
+    await vi.waitFor(() => expect(landed).toEqual(["note typed just before navigating"]), {
+      timeout: 5000,
+    });
     // ...but its completion no longer reports against the new day.
     expect(states.at(-1)).toBe("idle");
   });

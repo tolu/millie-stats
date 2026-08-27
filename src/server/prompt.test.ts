@@ -65,6 +65,14 @@ describe("SYSTEM_PROMPT", () => {
     expect(SYSTEM_PROMPT).toContain("Tolk aldri hull som symptomfrie dager");
   });
 
+  it("forbids describing unlogged days as merely missing a note", () => {
+    // Observed in a real summary: the model wrote "5 uten notat" for days
+    // nobody had filled in. A logged day with no note and a day that was never
+    // logged are different facts, and the vet reads the difference.
+    expect(SYSTEM_PROMPT).toContain("«ikke ført»");
+    expect(SYSTEM_PROMPT).toContain("uten notat");
+  });
+
   it("forbids diagnosing", () => {
     expect(SYSTEM_PROMPT).toContain("Du stiller ikke diagnose");
     expect(SYSTEM_PROMPT).toContain("ikke foreslå behandling");

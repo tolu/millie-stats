@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { DayEntry } from "../lib/entry";
 import { buildUserMessage, SYSTEM_PROMPT } from "./prompt";
 
-const HIT: DayEntry = { flags: { napping: true }, note: "nappet mye etter turen" };
+const HIT: DayEntry = { flags: { nagging: true }, note: "nappet mye etter turen" };
 const CLEAR: DayEntry = { flags: {}, note: "" };
 
 const fixture = new Map<string, DayEntry>([
@@ -78,13 +78,15 @@ describe("SYSTEM_PROMPT", () => {
     expect(SYSTEM_PROMPT).toContain("ikke foreslå behandling");
   });
 
-  it("carries Millie's background", () => {
+  it("carries Millie's background, by name", () => {
+    // The condition has a name; the vet uses it, so the summary should be able
+    // to as well rather than paraphrasing it every time.
     expect(SYSTEM_PROMPT).toContain("28. januar 2018");
-    expect(SYSTEM_PROMPT).toContain("ryggvirvlene");
+    expect(SYSTEM_PROMPT).toContain("spondylose");
   });
 
   it("lists every tracked symptom, so adding one cannot silently skip the prompt", () => {
-    for (const label of ["Gnikking", "Napping", "Lydsensitiv", "Slow walk"]) {
+    for (const label of ["Gnikking", "Nagging", "Lydsensitiv", "Slow walk"]) {
       expect(SYSTEM_PROMPT).toContain(label);
     }
   });

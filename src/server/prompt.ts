@@ -12,8 +12,8 @@ import { coverage } from "../lib/trends";
 
 export const MILLIE_BACKGROUND = [
   "Millie er en border collie, født 28. januar 2018, kastrert.",
-  "I april 2025 fikk eierne vite at hun har en ryggplage der ryggvirvlene vokser",
-  "sammen med brusk, og hun haltet. De tok et år med redusert aktivitet og økte",
+  "I april 2025 fikk eierne vite at hun har spondylose — ryggvirvlene vokser",
+  "sammen med brusk — og hun haltet. De tok et år med redusert aktivitet og økte",
   "intensiteten i treningen gradvis. Ingen halting er sett siden, men hun ligger",
   "nå på et lavere treningsnivå enn før.",
 ].join(" ");

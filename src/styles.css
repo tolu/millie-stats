@@ -6,7 +6,8 @@
  * goggle blue does all the signalling.
  *
  * Targets current Chrome and Safari only, so modern primitives are used
- * directly: nesting, :has(), color-mix() and field-sizing.
+ * directly: nesting, :has(), color-mix(), field-sizing, popover and CSS
+ * anchor positioning.
  */
 
 :root {
@@ -183,6 +184,22 @@ main {
   padding: 0;
   display: grid;
   gap: var(--gap);
+  /* Two up, so the whole day still fits above the fold on a phone.
+     minmax(0, 1fr) rather than 1fr: a plain 1fr floors at min-content, which
+     lets the longest label set its column wider than the other. */
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+/* Measured, not guessed: below about 352px "Lydsensitiv" reaches the info
+   button however tight the box model gets, so drop to one column there. */
+@media (width < 352px) {
+  .symptoms {
+    grid-template-columns: 1fr;
+  }
+}
+
+.symptoms legend {
+  grid-column: 1 / -1;
 }
 
 .symptoms legend {
@@ -196,49 +213,60 @@ main {
 }
 
 .symptom {
-  display: grid;
-  grid-template-columns: auto 1fr;
+  /* A flex row rather than an absolutely positioned button: the info button
+     then occupies real space instead of floating over the label, so a long
+     single word like "Lydsensitiv" can never run underneath it. */
+  display: flex;
   align-items: center;
-  gap: 0 0.75rem;
-  padding: 0.7rem 0.85rem;
   background: var(--raised);
   border: 2px solid var(--line);
   border-radius: var(--radius);
   box-shadow: var(--lift);
-  cursor: pointer;
   transition:
     border-color 0.12s,
     background-color 0.12s;
 
-  /* :has() lets the whole row respond to its own checkbox. */
+  /* :has() lets the whole card respond to its own checkbox. */
   &:has(:checked) {
     border-color: var(--blue-mid);
     background: color-mix(in oklab, var(--blue) 13%, var(--raised));
   }
 
-  &:has(:focus-visible) {
+  &:has(label:focus-visible) {
     outline: 2px solid var(--blue-light);
     outline-offset: 2px;
   }
 
-  &:active {
+  &:has(label:active) {
     box-shadow: var(--lift-sm);
     translate: 1px 1px;
   }
 }
 
+/* The label takes every pixel the info button does not, so the tap target is
+   still nearly the whole tile. */
+.symptom label {
+  flex: 1;
+  min-inline-size: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.7rem 0.35rem 0.7rem 0.65rem;
+  cursor: pointer;
+}
+
 .symptom input[type="checkbox"] {
   appearance: none;
   margin: 0;
-  inline-size: 1.6rem;
-  block-size: 1.6rem;
+  inline-size: 1.5rem;
+  block-size: 1.5rem;
   border: 2px solid var(--line-strong);
   border-radius: var(--radius-sm);
   background: var(--paper);
   display: grid;
   place-content: center;
   cursor: pointer;
-  grid-row: span 2;
+  flex: none;
 
   &::after {
     content: "";
@@ -263,15 +291,82 @@ main {
 }
 
 .symptom .label {
+  /* "Lydsensitiv" is the widest label and cannot wrap — it is one word. This
+     keeps it clear of the info button on a 360px Android without dropping the
+     whole grid to a single column. */
+  font-size: clamp(0.88rem, 0.55rem + 1.4vw, 0.95rem);
   font-weight: 700;
-  letter-spacing: -0.01em;
+  letter-spacing: -0.015em;
+  line-height: 1.2;
 }
 
-.symptom .help {
-  font-size: 0.8rem;
-  color: var(--ink-dim);
-  text-wrap: pretty;
+.info {
+  position: relative;
+  flex: none;
+  margin-inline-end: 0.5rem;
+  inline-size: 1.35rem;
+  block-size: 1.35rem;
+  border-radius: 50%;
+  border: 1.5px solid var(--line-strong);
+  background: transparent;
+  color: var(--ink-faint);
+  font: inherit;
+  font-size: 0.72rem;
+  font-weight: 700;
+  font-style: italic;
+  line-height: 1;
+  display: grid;
+  place-content: center;
+  cursor: pointer;
+  padding: 0;
+
+  /* The dot is 22px, which is fiddly with a thumb. This widens the hit area to
+     ~38px without making the visual any heavier. */
+  &::before {
+    content: "";
+    position: absolute;
+    inset: -0.5rem;
+  }
+
+  &:hover,
+  &:focus-visible {
+    color: var(--ink);
+    border-color: var(--blue-light);
+  }
 }
+
+.help-pop {
+  margin: 0;
+  inline-size: max-content;
+  max-inline-size: min(18rem, calc(100vw - 2rem));
+  background: var(--raised-high);
+  color: var(--ink-dim);
+  border: 2px solid var(--line-strong);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--lift);
+  padding: 0.6rem 0.75rem;
+  font-size: 0.82rem;
+  text-wrap: pretty;
+  gap: 0.15rem;
+
+  /* Only when open. A bare `display: grid` here would override the UA's
+     `display: none` for a closed popover and leave all four permanently on
+     screen. */
+  &:popover-open {
+    display: grid;
+  }
+
+  /* Anchored to its own info button, flipping above when there is no room
+     below. Without anchor positioning support it centres, which is fine. */
+  position-area: block-end span-inline-start;
+  position-try-fallbacks: block-start span-inline-start, block-end span-inline-end;
+  margin-block: 0.35rem;
+
+  & strong {
+    color: var(--ink);
+  }
+}
+
 
 /* ---------- note ---------- */
 

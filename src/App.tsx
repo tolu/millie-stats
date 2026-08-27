@@ -268,15 +268,37 @@ function Journal() {
             <legend>Kryss av for dagen</legend>
             <For each={SYMPTOMS}>
               {(symptom) => (
-                <label class="symptom">
-                  <input
-                    type="checkbox"
-                    checked={isFlagged(entry(), symptom.id)}
-                    onChange={(e) => toggle(symptom.id, e.currentTarget.checked)}
-                  />
-                  <span class="label">{symptom.label}</span>
-                  <span class="help">{symptom.help}</span>
-                </label>
+                // The card is a div rather than a label so the info button can
+                // live inside it: a label must not contain other interactive
+                // content, and a click on it would otherwise toggle the box.
+                <div class="symptom">
+                  <label>
+                    <input
+                      type="checkbox"
+                      checked={isFlagged(entry(), symptom.id)}
+                      onChange={(e) => toggle(symptom.id, e.currentTarget.checked)}
+                    />
+                    <span class="label">{symptom.label}</span>
+                  </label>
+                  <button
+                    type="button"
+                    class="info"
+                    popovertarget={`help-${symptom.id}`}
+                    style={{ "anchor-name": `--anchor-${symptom.id}` }}
+                    aria-label={`Hva betyr ${symptom.label}?`}
+                  >
+                    i
+                  </button>
+                  <div
+                    popover
+                    id={`help-${symptom.id}`}
+                    class="help-pop"
+                    style={{ "position-anchor": `--anchor-${symptom.id}` }}
+                  >
+                    <strong>{symptom.label}</strong>
+                    <span>{symptom.help}</span>
+                  </div>
+                </div>
               )}
             </For>
           </fieldset>

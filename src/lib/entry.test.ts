@@ -11,13 +11,13 @@ import {
 
 describe("serialization", () => {
   it("round-trips a real entry", () => {
-    const entry = { flags: { napping: true, "slow-walk": true }, note: "rolig kveld" };
+    const entry = { flags: { nagging: true, "slow-walk": true }, note: "rolig kveld" };
     expect(parseEntry(serializeEntry(entry))).toEqual(entry);
   });
 
   it("stores only true flags, so unchecked and never-set are identical", () => {
-    const stored = serializeEntry({ flags: { napping: true, gnikking: false }, note: "" });
-    expect(JSON.parse(stored)).toEqual({ flags: { napping: true }, note: "" });
+    const stored = serializeEntry({ flags: { nagging: true, gnikking: false }, note: "" });
+    expect(JSON.parse(stored)).toEqual({ flags: { nagging: true }, note: "" });
   });
 
   it("trims the note", () => {
@@ -56,12 +56,12 @@ describe("parseEntry tolerance", () => {
 describe("updates", () => {
   it("sets and clears flags immutably", () => {
     const base = EMPTY_ENTRY;
-    const on = withFlag(base, "napping", true);
-    expect(isFlagged(on, "napping")).toBe(true);
-    expect(isFlagged(base, "napping")).toBe(false);
+    const on = withFlag(base, "nagging", true);
+    expect(isFlagged(on, "nagging")).toBe(true);
+    expect(isFlagged(base, "nagging")).toBe(false);
 
-    const off = withFlag(on, "napping", false);
-    expect(isFlagged(off, "napping")).toBe(false);
+    const off = withFlag(on, "nagging", false);
+    expect(isFlagged(off, "nagging")).toBe(false);
     expect(Object.keys(off.flags)).toHaveLength(0);
   });
 
@@ -73,7 +73,7 @@ describe("updates", () => {
   it("knows when a day carries no information", () => {
     expect(isBlank(EMPTY_ENTRY)).toBe(true);
     expect(isBlank({ flags: {}, note: "   " })).toBe(true);
-    expect(isBlank({ flags: { napping: true }, note: "" })).toBe(false);
+    expect(isBlank({ flags: { nagging: true }, note: "" })).toBe(false);
     expect(isBlank({ flags: {}, note: "x" })).toBe(false);
   });
 });

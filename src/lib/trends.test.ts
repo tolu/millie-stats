@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { DayEntry } from "./entry";
 import { coverage, presenceOn, rollingAverage, seriesFor, statsFor } from "./trends";
 
-const HIT: DayEntry = { flags: { napping: true }, note: "" };
+const HIT: DayEntry = { flags: { nagging: true }, note: "" };
 const CLEAR: DayEntry = { flags: {}, note: "" };
 
 function journal(pairs: Array<[string, DayEntry]>): Map<string, DayEntry> {
@@ -15,9 +15,9 @@ describe("presence", () => {
       ["2026-08-24", HIT],
       ["2026-08-25", CLEAR],
     ]);
-    expect(presenceOn("2026-08-24", entries, "napping")).toBe(1);
-    expect(presenceOn("2026-08-25", entries, "napping")).toBe(0);
-    expect(presenceOn("2026-08-26", entries, "napping")).toBe(null);
+    expect(presenceOn("2026-08-24", entries, "nagging")).toBe(1);
+    expect(presenceOn("2026-08-25", entries, "nagging")).toBe(0);
+    expect(presenceOn("2026-08-26", entries, "nagging")).toBe(null);
   });
 
   it("builds a series in the order of the days given", () => {
@@ -26,7 +26,7 @@ describe("presence", () => {
       ["2026-08-26", CLEAR],
     ]);
     expect(
-      seriesFor(["2026-08-24", "2026-08-25", "2026-08-26"], entries, "napping"),
+      seriesFor(["2026-08-24", "2026-08-25", "2026-08-26"], entries, "nagging"),
     ).toEqual([1, null, 0]);
   });
 });
@@ -68,8 +68,8 @@ describe("statsFor", () => {
       ["2026-08-24", HIT],
       ["2026-08-25", CLEAR],
     ]);
-    expect(statsFor(["2026-08-24", "2026-08-25", "2026-08-26"], entries, "napping")).toEqual({
-      symptomId: "napping",
+    expect(statsFor(["2026-08-24", "2026-08-25", "2026-08-26"], entries, "nagging")).toEqual({
+      symptomId: "nagging",
       hits: 1,
       loggedDays: 2,
       rate: 0.5,
@@ -77,7 +77,7 @@ describe("statsFor", () => {
   });
 
   it("reports null rather than zero when nothing was logged", () => {
-    expect(statsFor(["2026-08-26"], journal([]), "napping").rate).toBe(null);
+    expect(statsFor(["2026-08-26"], journal([]), "nagging").rate).toBe(null);
   });
 });
 

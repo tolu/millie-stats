@@ -23,8 +23,8 @@ export const SYMPTOMS = [
     color: "var(--blue)",
   },
   {
-    id: "napping",
-    label: "Napping",
+    id: "nagging",
+    label: "Nagging",
     help: "Nappet og pirket i pelsen ved haleroten",
     color: "var(--blue-deep)",
   },

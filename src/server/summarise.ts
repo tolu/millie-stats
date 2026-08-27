@@ -11,7 +11,12 @@ import { buildUserMessage, SYSTEM_PROMPT } from "./prompt";
 import { saveSummary } from "./db";
 import type { SummaryRecord } from "./db";
 
-const MODEL = "claude-opus-5";
+// Sonnet 5 over Opus 5: this is "read a table, notice a trend, write two
+// paragraphs", which is squarely its strength. 2.5x cheaper and noticeably
+// faster on a button you press and wait for. Haiku was rejected — it supports
+// neither adaptive thinking nor effort, and the one thing this prompt must not
+// get wrong is reading IKKE FØRT gaps as good days.
+const MODEL = "claude-sonnet-5";
 
 /** A period longer than this is not a summary, it is a data dump. */
 const MAX_PERIOD_DAYS = 366;

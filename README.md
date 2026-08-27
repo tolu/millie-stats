@@ -29,8 +29,9 @@ The four, in the owners' own words:
   metaframework on Solid 1.x and is not this.
 - **Cloudflare Workers** + Static Assets. Pages is in maintenance mode.
 - **D1**, JSON payload columns — adding a checkbox never needs a migration.
-- **claude-opus-5** for summaries, adaptive thinking, medium effort, structured
-  output via zod.
+- **claude-sonnet-5** for summaries, adaptive thinking, medium effort, structured
+  output via zod. Input is ~900–3,500 tokens; output dominates the cost, so a
+  summary runs about 2–3 cents.
 - TypeScript 7, `erasableSyntaxOnly` — Node-24-strippable, no enums.
 
 Chrome and Safari only, deliberately: `field-sizing`, `:has()`, `color-mix()`,

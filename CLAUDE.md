@@ -105,6 +105,11 @@ should show up as a reviewable diff.
 
 ## Working agreement
 
+- **Do not use git worktrees in this project.** Work in the checkout directly.
+  No `--worktree`, no `EnterWorktree`, and no `isolation: "worktree"` on
+  subagents. `.claude/settings.json` sets `worktree.bgIsolation: "none"` so
+  background sessions are not forced into one either — the setting only covers
+  that case, so the rest is on you to respect.
 - **Never commit or push without explicit consent for that specific change.**
   Staging is fine. One approval does not carry to the next commit.
 - Never amend, force-push, rebase or reset. Merge to integrate.

@@ -58,11 +58,18 @@ src/server/summarise.ts the Claude call
 src/worker.ts          auth gate, server-function dispatch, document shell
 ```
 
+Agent-facing notes — the Solid 2 RC API deltas, the invariants and the
+gotchas — live in [CLAUDE.md](CLAUDE.md).
+
 ## Running it
 
 ```bash
 npm install && npm run dev
 ```
+
+A fresh clone typechecks after `npm install` alone: `@cloudflare/workers-types`
+is a devDependency, so there is no generated `worker-configuration.d.ts` to
+create first.
 
 Local dev skips the login through `.dev.vars` (`DEV_BYPASS_AUTH = "1"`). That
 variable exists **only** there, never in `wrangler.jsonc` — a deployment with no

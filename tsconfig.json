@@ -6,7 +6,7 @@
     "lib": ["ESNext", "DOM", "DOM.Iterable"],
     "jsx": "preserve",
     "jsxImportSource": "@solidjs/web",
-    "types": ["vite/client"],
+    "types": ["vite/client", "@cloudflare/workers-types"],
     "noEmit": true,
     "isolatedModules": true,
     "skipLibCheck": true,
@@ -26,5 +26,5 @@
     "noUnusedLocals": true,
     "noUnusedParameters": true
   },
-  "include": ["src", "vite.config.ts", "worker-configuration.d.ts"]
+  "include": ["src", "vite.config.ts"]
 }

@@ -9,16 +9,17 @@ Live at **https://millie-stats.tolu.workers.dev**
 ## Why it exists
 
 Millie is watched for four recurring symptoms, one of them possibly nerve pain
-near the tail base — relevant because in April 2025 she was found to have
-vertebrae fusing with cartilage, and limped. Nothing was written down, so there
-was no way to tell a vet whether things were getting better or worse.
+near the tail base — relevant because in April 2025 she was diagnosed with
+**spondylose**, where the vertebrae fuse with cartilage, and she limped.
+Nothing was written down, so there was no way to tell a vet whether things were
+getting better or worse.
 
 The four, in the owners' own words:
 
 | | |
 |---|---|
 | **Gnikking** | Rullet og gned seg på ryggen om kvelden |
-| **Napping** | Nappet og pirket i pelsen ved haleroten — the one watched most closely |
+| **Nagging** | Nappet og pirket i pelsen ved haleroten — the one watched most closely |
 | **Lydsensitiv** | Bjeffet på helt vanlige kveldslyder |
 | **Slow walk** | Brøt sammen på tur: hodet lavt, ørene stive |
 
@@ -35,7 +36,12 @@ The four, in the owners' own words:
 - TypeScript 7, `erasableSyntaxOnly` — Node-24-strippable, no enums.
 
 Chrome and Safari only, deliberately: `field-sizing`, `:has()`, `color-mix()`,
-CSS nesting and view transitions are used directly.
+CSS nesting, view transitions, native `popover` and CSS anchor positioning are
+used directly.
+
+The four checkboxes sit two-up with the name only; each carries an ⓘ that opens
+its description in a popover anchored to the button. Below 352px the widest
+label reaches the button, so it falls back to a single column.
 
 ## Layout
 
@@ -89,9 +95,43 @@ node scripts/seed-dev.mjs 2026-08-26 > /tmp/seed.sql && npx wrangler d1 execute 
 npm run build && npx wrangler deploy --config dist/server/wrangler.json
 ```
 
+### Migrations
+
+D1 tracks applied migrations itself, in a `d1_migrations` table. Use the
+tracker rather than running files by hand — it applies only what is new, in
+filename order:
+
 ```bash
-npx wrangler d1 execute millie --remote --file migrations/0001_init.sql
+npx wrangler d1 migrations list millie --remote
+npx wrangler d1 migrations apply millie --remote
 ```
+
+Files must be named `NNNN_name.sql` and live in `migrations/`. Locally, swap
+`--remote` for `--local`.
+
+**Write every migration so re-running it is harmless.** The tracker is per
+database, so local and remote are tracked separately, and a file applied by
+hand is invisible to it — `0001` uses `IF NOT EXISTS` and `0002` filters on the
+old key precisely so a second run is a no-op.
+
+**Deploy before migrating** when a migration renames something the old code
+reads. Between the two there is a window where one side cannot see the data; if
+the deploy fails you would otherwise be left with old code and new data.
+
+**Dry-run data migrations locally first.** The first draft of `0002` wrote `1`
+instead of `true`, which `parseEntry` ignores — it would have dropped the tick
+just as surely as not migrating at all.
+
+### When you actually need one
+
+Rarely, by design. Adding or removing a symptom needs **no** migration — that
+is the whole point of the JSON payload column. You need one only when:
+
+- the table shape itself changes (a new table, column or index), or
+- the **shape of the JSON** changes for rows that already exist — a renamed
+  key, a restructured field, a new required property with a backfill.
+
+`0002` is the second kind, and it is the kind that is easy to forget.
 
 ## Rules that hold the thing together
 
@@ -108,6 +148,29 @@ npx wrangler d1 execute millie --remote --file migrations/0001_init.sql
 - **Expected server-function failures are returned, not thrown.** Solid does not
   propagate error messages to the client, so a throw arrives as "Internal Server
   Error" — right for internals, useless for "no API key".
+
+## Known limitations
+
+**There is no logout, and no way to invalidate a single session.** The signed
+cookie is valid for a year, and nothing server-side tracks it — that is what
+makes the design stateless, and it is a deliberate trade for a two-person app.
+
+The consequence is worth knowing before you need it: **if a phone is lost or
+lent out, the only remedy is rotating `COOKIE_SECRET`**, which signs out every
+device including yours.
+
+```bash
+node -e "console.log(require('crypto').randomBytes(32).toString('base64url'))"
+npx wrangler secret put COOKIE_SECRET
+```
+
+That is the intended "sign everything out" lever, not a workaround. Changing
+`APP_PASSPHRASE` alone does **not** sign anyone out — existing cookies stay
+valid until they expire, because the passphrase is only checked at login.
+
+Adding a logout button is about ten lines; see
+[issue #1](https://github.com/tolu/millie-stats/issues/1) along with the other
+hardening worth considering.
 
 ## Mistakes made building this, and what they cost
 

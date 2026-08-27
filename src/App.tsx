@@ -211,14 +211,6 @@ function Journal() {
           <h1>Millie</h1>
           <p>Pinnedyr og Border Collie</p>
         </div>
-        <button
-          type="button"
-          class="icon-button"
-          popovertarget="about"
-          aria-label="Om registreringene"
-        >
-          ?
-        </button>
       </header>
 
       <nav class="datenav" aria-label="Velg dag">
@@ -308,23 +300,6 @@ function Journal() {
         </main>
       </Loading>
 
-      <div popover id="about">
-        <h2>Hva betyr avkrysningene?</h2>
-        <dl>
-          <For each={SYMPTOMS}>
-            {(symptom) => (
-              <>
-                <dt>{symptom.label}</dt>
-                <dd>{symptom.help}</dd>
-              </>
-            )}
-          </For>
-        </dl>
-        <p>
-          En dag uten registrering betyr at den ikke ble ført — ikke at
-          ingenting skjedde.
-        </p>
-      </div>
     </div>
   );
 }

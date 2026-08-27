@@ -6,7 +6,7 @@
  * goggle blue does all the signalling.
  *
  * Targets current Chrome and Safari only, so modern primitives are used
- * directly: nesting, :has(), color-mix(), field-sizing, popover, @property.
+ * directly: nesting, :has(), color-mix() and field-sizing.
  */
 
 :root {
@@ -107,23 +107,6 @@ main {
   color: var(--ink-dim);
 }
 
-.icon-button {
-  margin-inline-start: auto;
-  inline-size: 2rem;
-  block-size: 2rem;
-  border-radius: 50%;
-  border: 2px solid var(--line);
-  background: var(--raised);
-  color: var(--ink-dim);
-  font-weight: 700;
-  cursor: pointer;
-  flex: none;
-
-  &:hover {
-    color: var(--ink);
-    border-color: var(--line-strong);
-  }
-}
 
 /* ---------- date navigation ---------- */
 
@@ -352,52 +335,6 @@ main {
   }
 }
 
-/* ---------- info popover ---------- */
-
-[popover] {
-  margin: auto;
-  inline-size: min(30rem, calc(100vw - 2rem));
-  background: var(--raised);
-  color: var(--ink);
-  border: 2px solid var(--line-strong);
-  border-radius: var(--radius);
-  box-shadow: 5px 5px 0 #000;
-  padding: 1.1rem 1.25rem;
-
-  &::backdrop {
-    background: rgb(0 0 0 / 0.6);
-  }
-
-  & h2 {
-    margin: 0 0 0.5rem;
-    font-size: 1rem;
-  }
-
-  & dl {
-    margin: 0 0 0.75rem;
-    display: grid;
-    gap: 0.35rem;
-  }
-
-  & dt {
-    font-weight: 700;
-    font-size: 0.9rem;
-  }
-
-  & dd {
-    margin: 0 0 0.4rem;
-    font-size: 0.85rem;
-    color: var(--ink-dim);
-    text-wrap: pretty;
-  }
-
-  & p {
-    margin: 0;
-    font-size: 0.85rem;
-    color: var(--blue-light);
-    text-wrap: pretty;
-  }
-}
 
 /* Day changes crossfade rather than snapping. */
 @view-transition {

@@ -20,11 +20,15 @@ import { handleRequest } from "virtual:solid-ssr-handler";
 import { handleServerFunctionRequest } from "virtual:solid-server-function-handler";
 import "virtual:solid-server-function-manifest";
 import { createToken, readCookie, verifyToken } from "./lib/token";
+import { handlePhotoRequest } from "./server/photoRoutes";
 
 const COOKIE = "millie_session";
 const SESSION_TTL_MS = 365 * 24 * 60 * 60 * 1000;
 
 type Env = {
+  DB: D1Database;
+  /** Photo bytes. Read only through this worker, never as a public bucket. */
+  PHOTOS: R2Bucket;
   APP_PASSPHRASE?: string;
   COOKIE_SECRET?: string;
   /** Set only in .dev.vars. Never define it in wrangler.jsonc. */
@@ -104,6 +108,17 @@ export default {
         return json({ error: "unauthorised" }, { status: 401 });
       }
       return handleServerFunctionRequest(request);
+    }
+
+    // Photo bytes cannot travel through a server function without base64, so
+    // they get their own routes — behind the same gate, not a second one.
+    // That includes the image URLs themselves: an <img> src is a request like
+    // any other, and these are pictures of a specific dog on specific days.
+    if (url.pathname === "/_photo" || url.pathname.startsWith("/_photo/")) {
+      if (!(await isAuthorised(request, env))) {
+        return json({ error: "unauthorised" }, { status: 401 });
+      }
+      return handlePhotoRequest(request, env.DB, env.PHOTOS);
     }
 
     return handleRequest(request);

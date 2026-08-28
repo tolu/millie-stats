@@ -887,3 +887,158 @@ main {
   padding: 0.35rem 0.7rem;
   cursor: pointer;
 }
+
+/* ---------- photos ---------- */
+
+.photos {
+  display: grid;
+  gap: 0.6rem;
+
+  & h2 {
+    margin: 0;
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--ink-faint);
+  }
+}
+
+.photo-grid {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  /* The column count follows the photo count, so a day with one photo shows
+     it big rather than as a lone stamp in a five-wide row. Five is the cap, so
+     the ladder ends there and a day always fits one row.
+
+     auto-fit cannot do this: it derives tracks from the available width, not
+     from how many items there are, so one photo would stretch to the full
+     column. minmax(0, 1fr) rather than 1fr, which floors at min-content. */
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+
+  &:has(> :nth-child(3)) {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  &:has(> :nth-child(4)) {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+  &:has(> :nth-child(5)) {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+  gap: var(--gap);
+}
+
+.thumb {
+  display: block;
+  inline-size: 100%;
+  padding: 0;
+  background: var(--raised);
+  border: 2px solid var(--line);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--lift-sm);
+  cursor: pointer;
+  overflow: hidden;
+  /* Square wells, so a mixed portrait/landscape day still reads as a row. */
+  aspect-ratio: 1;
+
+  & img {
+    inline-size: 100%;
+    block-size: 100%;
+    object-fit: cover;
+    display: block;
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--blue-light);
+    outline-offset: 2px;
+  }
+}
+
+.photo-actions {
+  display: flex;
+  align-items: center;
+}
+
+.add-photo {
+  font: inherit;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--ink);
+  background: var(--raised-high);
+  border: 2px solid var(--line-strong);
+  border-radius: var(--radius-sm);
+  padding: 0.35rem 0.7rem;
+  cursor: pointer;
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: progress;
+  }
+}
+
+.viewer {
+  margin: auto;
+  padding: 0;
+  border: 2px solid var(--line-strong);
+  border-radius: var(--radius);
+  background: var(--raised);
+  color: var(--ink);
+  max-inline-size: min(96vw, 40rem);
+  max-block-size: 92dvh;
+  overflow: hidden;
+
+  /* Scoped to [open] on purpose. The UA sheet hides a closed dialog with
+     display: none, and an unconditional `display: grid` here outranks it —
+     which left an empty box sitting in the page whenever the viewer was shut.
+     The image and the actions are rows, so the buttons take real space under
+     the photo rather than floating over the thing you opened it to look at. */
+  &[open] {
+    display: grid;
+    grid-template-rows: 1fr auto;
+  }
+
+  &::backdrop {
+    background: rgb(0 0 0 / 0.75);
+  }
+}
+
+.viewer-image {
+  inline-size: 100%;
+  block-size: 100%;
+  min-block-size: 0;
+  object-fit: contain;
+  display: block;
+  background: var(--paper);
+}
+
+.viewer-actions {
+  display: flex;
+  gap: var(--gap);
+  padding: 0.7rem;
+  border-block-start: 2px solid var(--line);
+
+  & button {
+    font: inherit;
+    font-size: 0.8rem;
+    font-weight: 700;
+    border-radius: var(--radius-sm);
+    /* Comfortable on a phone; the delete sits next to the close button. */
+    padding: 0.5rem 0.9rem;
+    cursor: pointer;
+  }
+
+  & .close {
+    color: var(--ink);
+    background: var(--raised-high);
+    border: 2px solid var(--line-strong);
+  }
+
+  & .delete {
+    margin-inline-start: auto;
+    color: var(--danger);
+    background: transparent;
+    border: 2px solid var(--danger);
+  }
+}

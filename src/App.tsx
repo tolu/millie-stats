@@ -16,6 +16,7 @@ import { EMPTY_ENTRY, isFlagged, withFlag, withNote } from "./lib/entry";
 import type { DayEntry } from "./lib/entry";
 import { dayFromSearch, searchForDay } from "./lib/url";
 import { createWriteQueue } from "./lib/writeQueue";
+import Photos from "./Photos";
 import Trends from "./Trends";
 import Login from "./Login";
 import Summaries from "./Summaries";
@@ -137,6 +138,8 @@ function Journal() {
     if (document.startViewTransition) document.startViewTransition(move);
     else move();
   }
+
+  let noteField!: HTMLTextAreaElement;
 
   let noteTimer: ReturnType<typeof setTimeout> | undefined;
   onCleanup(() => clearTimeout(noteTimer));
@@ -306,6 +309,7 @@ function Journal() {
           <label class="note">
             <span>Notat</span>
             <textarea
+              ref={noteField}
               value={entry().note}
               placeholder="Hva skjedde i dag?"
               onInput={(e) => editNote(e.currentTarget.value)}
@@ -315,6 +319,16 @@ function Journal() {
           <output class="status" data-state={status()} aria-live="polite">
             {statusText()}
           </output>
+
+          <Photos
+            day={day()}
+            // A photo makes the day logged, so the charts below are stale.
+            onChange={() => setDataVersion((n) => n + 1)}
+            // What replaces requiring a note: a photo is almost always worth a
+            // sentence, so the cursor goes there rather than a field being
+            // made mandatory. Nothing else in this app blocks on input.
+            onUploaded={() => noteField.focus()}
+          />
 
           <Trends endDay={today} version={dataVersion()} />
 

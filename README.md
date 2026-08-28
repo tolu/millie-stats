@@ -1,8 +1,8 @@
 # Millie – Pinnedyr og Border Collie
 
 A private symptom journal for Millie, a border collie born 28 January 2018.
-Four checkboxes and a note per day, 30/90-day trend charts, and vet-ready
-summaries written by Claude.
+Four checkboxes, a note and up to five photos per day, 30/90-day trend charts,
+and vet-ready summaries written by Claude.
 
 Live at **https://millie-stats.tolu.workers.dev**
 
@@ -30,6 +30,11 @@ The four, in the owners' own words:
   metaframework on Solid 1.x and is not this.
 - **Cloudflare Workers** + Static Assets. Pages is in maintenance mode.
 - **D1**, JSON payload columns — adding a checkbox never needs a migration.
+- **R2** for photo bytes, indexed by a `photos` table in D1. Served through the
+  worker rather than a public bucket, so the images sit behind the same login as
+  everything else. Resized to 1600px client-side before upload — a phone photo
+  is 2–5 MB, and that is a ten-second upload on mobile data for something viewed
+  400px wide.
 - **claude-sonnet-5** for summaries, adaptive thinking, medium effort, structured
   output via zod. Input is ~900–3,500 tokens; output dominates the cost, so a
   summary runs about 2–3 cents.
@@ -51,8 +56,12 @@ src/lib/date.ts        Oslo calendar days
 src/lib/entry.ts       the JSON boundary for a day
 src/lib/trends.ts      windowing and rolling averages
 src/lib/writeQueue.ts  serialised saves
+src/lib/photo.ts       photo keys and URL parsing
+src/lib/image.ts       client-side resize and re-encode
 src/lib/token.ts       signed session cookie
 src/server/db.ts       D1 access
+src/server/photos.ts   the photo index and its R2 objects
+src/server/photoRoutes.ts  upload, serve and delete
 src/server/prompt.ts   the summary prompt (snapshot-tested)
 src/server/summarise.ts the Claude call
 src/worker.ts          auth gate, server-function dispatch, document shell
@@ -149,6 +158,12 @@ is the whole point of the JSON payload column. You need one only when:
   tracker. The prompt writes gaps out as `IKKE FØRT` rather than omitting them.
 - **Adding a symptom is one line** in `src/symptoms.ts`. The `id` goes into
   stored JSON and can never change once data exists.
+- **A photo marks its day as logged**, by ensuring a `days` row exists rather
+  than by teaching the charts a second definition of "logged". Uploading never
+  overwrites a day that already has ticks or a note — see `ensureDay`.
+- **Photos live outside `days.data`.** Every save carries the whole day, so a
+  photo inside that payload would race the note debounce and be clobbered by
+  it.
 - **Auth is enforced at the worker**, not per server function. One gate fails
   closed by construction; a check repeated everywhere fails open the first time
   someone forgets one.

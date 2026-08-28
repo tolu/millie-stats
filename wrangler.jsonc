@@ -15,5 +15,14 @@
       "database_name": "millie",
       "database_id": "d6f1686c-afce-49c9-8faf-e693579de54f"
     }
+  ],
+  // Photo bytes only. D1 indexes them; the bucket never answers a request
+  // directly — every read goes through the worker so it stays behind the same
+  // login as the rest of the journal.
+  "r2_buckets": [
+    {
+      "binding": "PHOTOS",
+      "bucket_name": "millie-photos"
+    }
   ]
 }

@@ -2,6 +2,7 @@
 
 import { isDay } from "../lib/date";
 import { type DayEntry, parseEntry, serializeEntry } from "../lib/entry";
+import { deletePhotosForDay, listPhotos, type PhotoRecord } from "./photos";
 
 // The binding is reached through a lazy dynamic import rather than a top-level
 // `import { env } from "cloudflare:workers"`. Start mode's post-build step
@@ -11,6 +12,11 @@ import { type DayEntry, parseEntry, serializeEntry } from "../lib/entry";
 async function db(): Promise<D1Database> {
   const { env } = await import("cloudflare:workers");
   return (env as unknown as { DB: D1Database }).DB;
+}
+
+async function bucket(): Promise<R2Bucket> {
+  const { env } = await import("cloudflare:workers");
+  return (env as unknown as { PHOTOS: R2Bucket }).PHOTOS;
 }
 
 export type DayRecord = {
@@ -151,8 +157,19 @@ export async function listSummaries(limit = 20): Promise<SummaryRecord[]> {
   return results.map(toSummary);
 }
 
-/** Removes a day entirely, returning it to "never logged". */
+/**
+ * The day's photos, oldest first. Metadata only — the bytes are served by the
+ * worker's /_photo routes, because a server function would have to base64 them
+ * through a JSON payload to get there.
+ */
+export async function photosForDay(day: string): Promise<PhotoRecord[]> {
+  assertDay(day, "day");
+  return listPhotos(await db(), day);
+}
+
+/** Removes a day entirely, photos included, returning it to "never logged". */
 export async function clearDay(day: string): Promise<void> {
   assertDay(day, "day");
+  await deletePhotosForDay(await db(), await bucket(), day);
   await (await db()).prepare(`DELETE FROM days WHERE day = ?1`).bind(day).run();
 }

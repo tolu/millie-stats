@@ -4,7 +4,8 @@ A private symptom journal for Millie, a border collie. Solid 2 RC on Cloudflare
 Workers with D1, plus vet-facing summaries from Claude. See README.md for what
 it is and why; this file is what you need to change it safely.
 
-Live: https://millie-stats.tolu.workers.dev · one worker, one D1 named `millie`.
+Live: https://millie-stats.tolu.workers.dev · one worker, one D1 named `millie`,
+one R2 bucket named `millie-photos`.
 
 ## Commands
 
@@ -56,11 +57,29 @@ This caused real data loss; `src/lib/writeQueue.ts` exists because of it.
   into the prerendered shell; wrong order ships an `index.html` pointing at a
   stale hash and production is a blank page with no error.
 - **Auth is enforced once, in `src/worker.ts`**, not per server function. Keep
-  it that way — one gate fails closed, scattered checks fail open.
+  it that way — one gate fails closed, scattered checks fail open. The gate
+  covers the whole `/_photo` prefix, image URLs included: an `<img src>` is a
+  request like any other, and a public bucket would quietly undo the login.
+- **A photo marks its day as logged via `ensureDay`**, which is
+  `ON CONFLICT DO NOTHING` and never `saveDay`. `saveDay`'s `DO UPDATE SET
+  data = ?2` would wipe a day that already has ticks and a note. `DO NOTHING`
+  also makes the ordering against a concurrent queued save irrelevant in both
+  directions. "Logged" still means exactly one thing everywhere: a row in
+  `days`.
+- **Photos never go in `days.data`.** Every save carries the whole day, so a
+  photo in that payload would race the note debounce — the same class of bug
+  `writeQueue` exists to prevent. They live in their own table, keyed by day.
+- **Image bytes never go through a server function.** Arguments are serialised,
+  so it would mean base64 and a 33% penalty on the slowest leg. `/_photo` is a
+  plain worker route; only the photo *list* is a server function.
 - **Expected server-function failures are returned, not thrown.** Solid does
   not propagate error messages to the client, so a throw reaches the UI as
   "Internal Server Error". Return `{ ok: false, message }` for anything the
   user can act on; let genuine faults throw.
+
+Photo storage functions take their bindings as parameters rather than reaching
+for `import("cloudflare:workers")`. `src/worker.ts` is imported in *Node* to
+prerender the shell, so nothing on that path may touch the `cloudflare:` scheme.
 
 ## Types
 
@@ -95,13 +114,16 @@ should show up as a reviewable diff.
   then `npx wrangler d1 execute millie --local --file /tmp/s.sql` for 120 days
   of fake data with gaps and a trend.
 - **Deploy before migrating** when a migration renames something the old code
-  reads, and dry-run data migrations locally first.
+  reads, and dry-run data migrations locally first. `0003_photos` is the
+  opposite case — it only adds a table, and the new code needs it — so migrate
+  first, then deploy. The R2 bucket must exist before either.
 - Testing summaries locally needs a real `ANTHROPIC_API_KEY` line in
   `.dev.vars`. Never ask the user to paste a key into the conversation.
 - The built config keeps its own local D1 under `dist/`, so `rm -rf dist`
   destroys it. `npm run dev:worker` pins `--persist-to` to avoid that.
 - Seeded or scratch data is fake health data about a real dog. Clear it when
-  done rather than leaving it lying around.
+  done rather than leaving it lying around. That includes uploaded photos —
+  clearing `photos` rows without deleting the R2 objects leaves them orphaned.
 
 ## Working agreement
 

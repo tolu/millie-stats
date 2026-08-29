@@ -1,7 +1,8 @@
 "use server";
 
 import { isDay } from "../lib/date";
-import { type DayEntry, parseEntry, serializeEntry } from "../lib/entry";
+import { type DayEntry, isWeight, parseEntry, serializeEntry } from "../lib/entry";
+import type { Measurement } from "../lib/weight";
 import { deletePhotosForDay, listPhotos, type PhotoRecord } from "./photos";
 
 // The binding is reached through a lazy dynamic import rather than a top-level
@@ -165,6 +166,36 @@ export async function listSummaries(limit = 20): Promise<SummaryRecord[]> {
 export async function photosForDay(day: string): Promise<PhotoRecord[]> {
   assertDay(day, "day");
   return listPhotos(await db(), day);
+}
+
+/**
+ * The most recent weight on record, optionally the latest one strictly before
+ * `before`.
+ *
+ * Two callers, one mechanism. The dialog wants the last weight anywhere, so a
+ * re-weigh is a nudge rather than a retype. The chart wants the last weight
+ * before its window, to anchor the left edge of the line — an earlier version
+ * fetched 180 extra days of rows to find that, which was both wasteful and
+ * still wrong for a weigh-in 200 days back.
+ *
+ * ORDER BY day DESC on the primary key lets SQLite walk the index backwards
+ * and stop at the first hit, so the un-indexable json_extract predicate is
+ * cheap unless no weight exists at all.
+ */
+export async function lastWeight(before?: string): Promise<Measurement | null> {
+  const where =
+    before === undefined
+      ? `json_extract(data, '$.weight') IS NOT NULL`
+      : `day < ?1 AND json_extract(data, '$.weight') IS NOT NULL`;
+  const statement = (await db()).prepare(
+    `SELECT day, json_extract(data, '$.weight') AS kg FROM days
+     WHERE ${where}
+     ORDER BY day DESC LIMIT 1`,
+  );
+  const bound =
+    before === undefined ? statement : statement.bind(assertDay(before, "before"));
+  const row = await bound.first<{ day: string; kg: number }>();
+  return row && isWeight(row.kg) ? { day: row.day, kg: row.kg } : null;
 }
 
 /** Removes a day entirely, photos included, returning it to "never logged". */

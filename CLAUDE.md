@@ -17,6 +17,13 @@ npm run build        # client + server bundles
 npm run dev:worker   # the BUILT worker under wrangler dev
 ```
 
+**Changing a server module means restarting the dev server.** Vite hot-reloads
+the client, but the workerd side keeps the old bundle, so edits to `db.ts`,
+`entry.ts` or anything else a server function imports keep running the previous
+version. It fails silently and looks exactly like a logic bug — a new field
+simply never arrives on the client. This cost real debugging time when `weight`
+was added to `parseEntry`.
+
 Never start a dev server with Bash — use the browser-preview tooling
 (`.claude/launch.json` defines the `dev` config). Verify UI changes by driving
 the page and reading the DOM, not by asking the user to look.
@@ -50,6 +57,24 @@ This caused real data loss; `src/lib/writeQueue.ts` exists because of it.
 - **Symptom `id`s are written into stored JSON and can never change** without a
   data migration (see `migrations/0002` for the pattern). Adding or removing a
   symptom is one line in `src/symptoms.ts` and needs no migration.
+- **`with*` helpers in `entry.ts` must spread the entry**, never rebuild it from
+  named fields. `withFlag` used to `return { flags, note: entry.note }`, so the
+  moment `weight` joined `DayEntry`, ticking a checkbox silently erased that
+  day's weight. Any new optional field would have hit the same trap.
+- **Weight interpolates; symptoms never do.** An unlogged symptom day is
+  genuinely unknown, so `trends.ts` breaks the line across a gap. A day nobody
+  weighed her still had a weight, so `weight.ts` interpolates between
+  measurements — but the chart marks the measured days with dots, and the line
+  itself is dashed throughout because most of it is inferred. Beyond the first
+  and last measurement it extends flat: continuing the slope would invent
+  weight loss that was never observed.
+- **`BASELINE_KG` is a reference line, never a data point.** Seeding the series
+  at 16 before the first measurement would draw a fake ramp up to whatever she
+  actually weighed. With no measurements at all the chart says so rather than
+  drawing a flat 16 kg line that looks like data.
+- **A weight marks its day as logged**, like a photo — unavoidably, since it
+  lives in `days.data`. That is the accepted cost of one rule: "logged" means a
+  row in `days`, everywhere.
 - **Saves are queued, never parallel.** Each write carries the whole day, so
   last-write-wins is only safe when "last" means last-issued.
 - **The client environment must build before the server bundle**

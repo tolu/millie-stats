@@ -1,8 +1,8 @@
 # Millie – Pinnedyr og Border Collie
 
 A private symptom journal for Millie, a border collie born 28 January 2018.
-Four checkboxes, a note and up to five photos per day, 30/90-day trend charts,
-and vet-ready summaries written by Claude.
+Four checkboxes, a note, a weight and up to five photos per day, 30/90-day
+trend charts, and vet-ready summaries written by Claude.
 
 Live at **https://millie-stats.tolu.workers.dev**
 
@@ -55,6 +55,7 @@ src/symptoms.ts        the four symptoms — the only place one is defined
 src/lib/date.ts        Oslo calendar days
 src/lib/entry.ts       the JSON boundary for a day
 src/lib/trends.ts      windowing and rolling averages
+src/lib/weight.ts      kilos, and the interpolation between weigh-ins
 src/lib/writeQueue.ts  serialised saves
 src/lib/photo.ts       photo keys and URL parsing
 src/lib/image.ts       client-side resize and re-encode
@@ -161,6 +162,14 @@ is the whole point of the JSON payload column. You need one only when:
 - **A photo marks its day as logged**, by ensuring a `days` row exists rather
   than by teaching the charts a second definition of "logged". Uploading never
   overwrites a day that already has ticks or a note — see `ensureDay`.
+- **A weight is one more key in the day's JSON**, so it needed no migration —
+  the same property that makes adding a checkbox free. It marks the day logged
+  too, unavoidably, since it lives in the row.
+- **Weight interpolates across unweighed days; symptoms never do.** A day
+  nobody weighed her still had a weight; a day nobody logged is genuinely
+  unknown. The chart keeps the two honest by marking the measured days with
+  dots — the line between them is dashed throughout, because most of it is
+  inference — and it never projects past the last weigh-in.
 - **Photos live outside `days.data`.** Every save carries the whole day, so a
   photo inside that payload would race the note debounce and be clobbered by
   it.
@@ -239,8 +248,9 @@ never touches a timezone. The exercise found the `?d=` validation gap instead.
 
 ## Testing
 
-`npm test` — 69 tests over dates, serialisation, trend maths, the write queue,
-session tokens and the prompt. Logic only; no component tests.
+`npm test` — 111 tests over dates, serialisation, trend maths, weight
+interpolation, the write queue, session tokens and the prompt. Logic only; no
+component tests.
 
 Every test here was verified to fail without its implementation. Seven deliberate
 mutations, all caught. That is how the `?d=` bug surfaced and how the DST claim

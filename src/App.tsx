@@ -12,11 +12,12 @@ import {
 import "./styles.css";
 import { SYMPTOMS } from "./symptoms";
 import { addDays, formatLong, osloDay } from "./lib/date";
-import { EMPTY_ENTRY, isFlagged, withFlag, withNote } from "./lib/entry";
+import { EMPTY_ENTRY, isFlagged, withFlag, withNote, withWeight } from "./lib/entry";
 import type { DayEntry } from "./lib/entry";
 import { dayFromSearch, searchForDay } from "./lib/url";
 import { createWriteQueue } from "./lib/writeQueue";
 import Photos from "./Photos";
+import Weight from "./Weight";
 import Trends from "./Trends";
 import Login from "./Login";
 import Summaries from "./Summaries";
@@ -184,6 +185,14 @@ function Journal() {
     queue.push({ day: day(), entry: next });
   }
 
+  // Same shape as toggle: a weight is a discrete act, so it saves at once
+  // rather than being debounced like typing.
+  function editWeight(kg: number | null) {
+    const next = edit((current) => withWeight(current, kg));
+    clearTimeout(noteTimer);
+    queue.push({ day: day(), entry: next });
+  }
+
   function editNote(note: string) {
     const next = edit((current) => withNote(current, note));
     const target = day();
@@ -214,6 +223,7 @@ function Journal() {
           <h1>Millie</h1>
           <p>Pinnedyr og Border Collie</p>
         </div>
+        <Weight day={day()} weight={entry().weight} onSave={editWeight} />
       </header>
 
       <nav class="datenav" aria-label="Velg dag">

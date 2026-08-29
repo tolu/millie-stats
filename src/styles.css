@@ -1025,6 +1025,7 @@ main {
     font-weight: 700;
     border-radius: var(--radius-sm);
     /* Comfortable on a phone; the delete sits next to the close button. */
+    min-block-size: 44px;
     padding: 0.5rem 0.9rem;
     cursor: pointer;
   }
@@ -1040,5 +1041,241 @@ main {
     color: var(--danger);
     background: transparent;
     border: 2px solid var(--danger);
+  }
+}
+
+/* ---------- weight ---------- */
+
+.weight {
+  display: grid;
+  gap: 0.35rem;
+  margin-block-start: 0.5rem;
+
+  & h3 {
+    margin: 0;
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--ink-faint);
+  }
+}
+
+.weight-read {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--ink);
+  text-wrap: pretty;
+
+  & strong {
+    font-size: 1.1rem;
+    color: var(--blue-light);
+  }
+}
+
+/* The frame. The plot inside carries no padding of its own, so the baseline
+   label can be placed by a plain percentage of the plot's height. */
+.weight-chart {
+  background: var(--raised);
+  border: 2px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--lift);
+  padding: 0.5rem 0.6rem;
+}
+
+.weight-plot {
+  position: relative;
+  display: grid;
+  /* A gutter for the baseline label. Without it the label sits on top of the
+     data — it was covering the most recent dot, which is the one point on the
+     chart you most want to see. */
+  padding-inline-end: 2.6rem;
+}
+
+.weight-svg {
+  inline-size: 100%;
+  block-size: 5.5rem;
+  display: block;
+  overflow: visible;
+}
+
+/* Normal weight. Dashed, because it is a reference rather than a measurement,
+   but no longer near-invisible: at --line-strong it sat at 1.85:1 against the
+   panel, under the 3:1 minimum for non-text, and was simply not there in
+   daylight. */
+.weight-baseline {
+  stroke: var(--ink-faint);
+  stroke-width: 1;
+  stroke-dasharray: 3 3;
+  vector-effect: non-scaling-stroke;
+}
+
+/* Names the dashed line, sitting on it. --pos is the line's height fraction,
+   computed from the same scale the chart is drawn with. The chip background
+   keeps it readable where the weight line passes underneath. */
+.weight-ref {
+  position: absolute;
+  inset-block-start: calc(var(--pos, 0.5) * 100%);
+  inset-inline-end: 0;
+  translate: 0 -50%;
+  font-size: 0.65rem;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--ink-dim);
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+/* Dashed because every point between two weigh-ins is interpolated. The solid
+   dots are the only observed values, and the difference has to be visible. */
+.weight-line {
+  fill: none;
+  stroke: var(--blue-mid);
+  stroke-width: 1.5;
+  stroke-dasharray: 4 3;
+  stroke-linecap: round;
+  vector-effect: non-scaling-stroke;
+}
+
+/* Drawn as a zero-length round-capped stroke rather than a circle — see the
+   comment in Trends.tsx. The cap's diameter is the stroke width, and
+   non-scaling-stroke keeps that in pixels, so the chart's non-uniform stretch
+   cannot flatten it into an ellipse. */
+.weight-dot {
+  fill: none;
+  stroke: var(--blue-light);
+  stroke-width: 6;
+  stroke-linecap: round;
+  vector-effect: non-scaling-stroke;
+}
+
+/* Pushed right inside the masthead's flex row rather than floated over the
+   page: it then occupies real space, so it can never land on top of the
+   heading at a narrow width. */
+.weight-button {
+  margin-inline-start: auto;
+  flex: none;
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--ink);
+  background: var(--raised);
+  border: 2px solid var(--line-strong);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--lift-sm);
+  padding: 0.4rem 0.7rem;
+  cursor: pointer;
+  white-space: nowrap;
+
+  /* On a day she was weighed the button is the readout, so it carries the
+     accent; unweighed it is just an invitation. */
+  &[data-set="yes"] {
+    color: var(--blue-light);
+    border-color: var(--blue-deep);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--blue-light);
+    outline-offset: 2px;
+  }
+}
+
+.weight-dialog {
+  margin: auto;
+  padding: 1rem;
+  border: 2px solid var(--line-strong);
+  border-radius: var(--radius);
+  background: var(--raised);
+  color: var(--ink);
+  max-inline-size: min(92vw, 22rem);
+
+  /* Scoped to [open], or it outranks the UA sheet's display:none for a closed
+     dialog and leaves an empty box in the page. */
+  &[open] {
+    display: grid;
+    gap: 0.7rem;
+  }
+
+  &::backdrop {
+    background: rgb(0 0 0 / 0.75);
+  }
+
+  & h2 {
+    margin: 0;
+    font-size: 0.95rem;
+    text-wrap: balance;
+  }
+}
+
+.weight-field {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  /* Without this the input's intrinsic size floors the row's min-content and
+     the dialog overflows: at 320px the "kg" and the Lagre button were pushed
+     clean off the edge. */
+  min-inline-size: 0;
+
+  & input {
+    flex: 1;
+    /* Basis zero, so the field takes what is left rather than demanding the
+       ~20 characters an unsized text input asks for. */
+    inline-size: 0;
+    min-inline-size: 0;
+    font: inherit;
+    font-size: 1.5rem;
+    font-weight: 700;
+    text-align: end;
+    color: var(--ink);
+    background: var(--paper);
+    border: 2px solid var(--line);
+    border-radius: var(--radius-sm);
+    padding: 0.5rem 0.7rem;
+
+    &:focus-visible {
+      outline: 2px solid var(--blue-light);
+      outline-offset: 1px;
+    }
+  }
+
+  & span {
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--ink-dim);
+  }
+}
+
+.weight-actions {
+  display: flex;
+  gap: 0.5rem;
+
+  & button {
+    font: inherit;
+    font-size: 0.8rem;
+    font-weight: 700;
+    border-radius: var(--radius-sm);
+    /* Tall enough to be a comfortable thumb target on a phone. */
+    min-block-size: 44px;
+    padding: 0.5rem 0.9rem;
+    cursor: pointer;
+  }
+
+  & .close {
+    color: var(--ink);
+    background: var(--raised-high);
+    border: 2px solid var(--line-strong);
+  }
+
+  & .delete {
+    color: var(--danger);
+    background: transparent;
+    border: 2px solid var(--danger);
+  }
+
+  & .save {
+    margin-inline-start: auto;
+    color: var(--paper);
+    background: var(--blue);
+    border: 2px solid var(--blue-light);
   }
 }

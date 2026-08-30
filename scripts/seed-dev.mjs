@@ -6,7 +6,7 @@
 // Deterministic (seeded PRNG) so repeated
 // runs give the same picture. Deliberately includes:
 //  - unlogged gaps, to prove they render differently from logged-clear days
-//  - a rising "napping" trend over the last three weeks, which the charts and
+//  - a rising "nagging" trend over the last three weeks, which the charts and
 //    later the AI summary must both surface
 let seed = 20260826;
 const rnd = () => ((seed = (seed * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff);
@@ -22,10 +22,10 @@ for (let i = DAYS - 1; i >= 0; i--) {
   const daysFromEnd = i;
   if (rnd() < 0.12) continue; // ~12% of days never got filled in
 
-  const nappingBase = 0.15;
+  const naggingBase = 0.15;
   const recentBoost = daysFromEnd < 21 ? 0.45 : 0;
   const flags = {};
-  if (rnd() < nappingBase + recentBoost) flags["napping"] = true;
+  if (rnd() < naggingBase + recentBoost) flags["nagging"] = true;
   if (rnd() < 0.22) flags["gnikking"] = true;
   if (rnd() < 0.18) flags["lydsensitiv"] = true;
   if (rnd() < 0.08) flags["slow-walk"] = true;

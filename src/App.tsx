@@ -1,31 +1,11 @@
-import {
-  createMemo,
-  createSignal,
-  For,
-  Errored,
-  Loading,
-  Match,
-  onCleanup,
-  Switch,
-  untrack,
-} from "solid-js";
+import { createMemo, createSignal, Errored, Match, onSettled, Switch } from "solid-js";
 import "./styles.css";
-import { SYMPTOMS } from "./symptoms";
-import { addDays, formatLong, osloDay } from "./lib/date";
-import { EMPTY_ENTRY, isFlagged, withFlag, withNote, withWeight } from "./lib/entry";
-import type { DayEntry } from "./lib/entry";
-import { dayFromSearch, searchForDay } from "./lib/url";
-import { createWriteQueue } from "./lib/writeQueue";
-import Photos from "./Photos";
-import Weight from "./Weight";
-import Trends from "./Trends";
+import Day from "./Day";
+import Journal from "./Journal";
 import Login from "./Login";
-import Summaries from "./Summaries";
-import type { WriteState } from "./lib/writeQueue";
-import { getDay, saveDay } from "./server/db";
-
-/** Typing shouldn't fire a write per keystroke. Ticking a box should. */
-const NOTE_DEBOUNCE_MS = 500;
+import { osloDay } from "./lib/date";
+import { routeFromSearch, searchForRoute } from "./lib/url";
+import type { Route } from "./lib/url";
 
 type AuthState = { authorised: boolean; configured: boolean };
 
@@ -53,7 +33,7 @@ export default function App() {
   const view = createMemo(() => {
     const state = auth();
     if (!state) return "checking" as const;
-    return state.authorised ? ("journal" as const) : ("login" as const);
+    return state.authorised ? ("signed-in" as const) : ("login" as const);
   });
 
   return (
@@ -67,15 +47,70 @@ export default function App() {
           onSuccess={() => setAuth({ configured: true, authorised: true })}
         />
       </Match>
-      <Match when={view() === "journal"}>
+      <Match when={view() === "signed-in"}>
         {/* A failed read must not take the whole page down. Without this a
             single database hiccup replaces the app with a blank error page and
             no way back. */}
         <Errored fallback={(error, reset) => <Failure error={error} reset={reset} />}>
-          <Journal />
+          <SignedIn />
         </Errored>
       </Match>
     </Switch>
+  );
+}
+
+/**
+ * Owns the route. Both pages sit inside App's error boundary, so a database
+ * hiccup on either still degrades to <Failure> rather than a blank page.
+ */
+function SignedIn() {
+  const today = osloDay();
+  const [route, setRoute] = createSignal<Route>(routeFromSearch(location.search, today));
+
+  onSettled(() => {
+    // The browser would otherwise try to restore a scroll offset into a page
+    // that has not rendered its list yet.
+    history.scrollRestoration = "manual";
+    const onPop = () => setRoute(routeFromSearch(location.search, today));
+    addEventListener("popstate", onPop);
+    return () => removeEventListener("popstate", onPop);
+  });
+
+  /**
+   * A change of page pushes; moving between days replaces.
+   *
+   * That is what makes Back leave the journal, and leave a day opened from the
+   * journal, without walking back through every day browsed with the chevrons.
+   */
+  function go(next: Route) {
+    const changedView = next.view !== route().view;
+    const search = searchForRoute(next, today) || location.pathname;
+    if (changedView) history.pushState(null, "", search);
+    else history.replaceState(null, "", search);
+    setRoute(next);
+    // The day view is long; without this the journal opens mid-list.
+    if (changedView) scrollTo(0, 0);
+  }
+
+  return (
+    <div class="shell">
+      <Switch>
+        <Match when={route().view === "day"}>
+          <Day
+            today={today}
+            day={route().day}
+            onDay={(day) => go({ view: "day", day })}
+            onJournal={() => go({ view: "journal", day: route().day })}
+          />
+        </Match>
+        <Match when={route().view === "journal"}>
+          <Journal
+            onDay={() => go({ view: "day", day: route().day })}
+            onOpenDay={(day) => go({ view: "day", day })}
+          />
+        </Match>
+      </Switch>
+    </div>
   );
 }
 
@@ -93,259 +128,6 @@ function Failure(props: { error: unknown; reset: () => void }) {
       <button type="button" onClick={() => props.reset()}>
         Prøv igjen
       </button>
-    </div>
-  );
-}
-
-function Journal() {
-  const today = osloDay();
-  const [day, setDayRaw] = createSignal(dayFromSearch(location.search, today));
-  const [status, setStatus] = createSignal<WriteState>("idle");
-  const [error, setError] = createSignal("");
-  // Bumped on every successful save so the charts below reflect the edit that
-  // was just made, without refetching on every keystroke.
-  const [dataVersion, setDataVersion] = createSignal(0);
-
-  // The optimistic layer: what the user has typed or ticked but which may not
-  // have reached D1 yet. Tagged with its day so switching days never shows a
-  // draft belonging to a different one.
-  const [draft, setDraft] = createSignal<{ day: string; entry: DayEntry } | null>(null);
-
-  // Solid 2: a computation may return a promise; reading it downstream
-  // suspends until it settles.
-  const stored = createMemo(async () => await getDay(day()));
-
-  const entry = createMemo((): DayEntry => {
-    const local = draft();
-    if (local && local.day === day()) return local.entry;
-    return stored()?.entry ?? EMPTY_ENTRY;
-  });
-
-  function goTo(next: string) {
-    if (next > today) return;
-    const move = () => {
-      // A pending note save belongs to the day being left, so flush it before
-      // the queue is reset - otherwise navigating away loses what was typed.
-      clearTimeout(noteTimer);
-      const pending = draft();
-      if (pending && pending.day === day()) queue.push(pending);
-      queue.detach();
-      setDraft(null);
-      setStatus("idle");
-      setDayRaw(next);
-      history.replaceState(null, "", searchForDay(next, today) || location.pathname);
-    };
-    // Crossfade the day label rather than snapping it.
-    if (document.startViewTransition) document.startViewTransition(move);
-    else move();
-  }
-
-  let noteField!: HTMLTextAreaElement;
-
-  let noteTimer: ReturnType<typeof setTimeout> | undefined;
-  onCleanup(() => clearTimeout(noteTimer));
-
-  // Writes are queued rather than fired in parallel: every save carries the
-  // whole day, so a slow one landing after a fast one would reinstate stale
-  // data. See lib/writeQueue.
-  const queue = createWriteQueue<{ day: string; entry: DayEntry }>(
-    ({ day: target, entry: value }) => saveDay(target, value),
-    (state, message) => {
-      setStatus(state);
-      setError(message ?? "");
-      if (state === "saved") setDataVersion((n) => n + 1);
-    },
-  );
-
-  /**
-   * Applies an edit to the LATEST entry and queues the save.
-   *
-   * The base comes from the setter callback, never from reading the memo back:
-   * Solid 2 batches signal writes, so two edits in the same tick would both
-   * derive from the same stale value and the second would silently drop the
-   * first. That is exactly how a ticked box got wiped by the following note.
-   */
-  function edit(change: (current: DayEntry) => DayEntry): DayEntry {
-    const target = day();
-    let next!: DayEntry;
-    setDraft((previous) => {
-      const base =
-        previous && previous.day === target
-          ? previous.entry
-          : (untrack(stored)?.entry ?? EMPTY_ENTRY);
-      next = change(base);
-      return { day: target, entry: next };
-    });
-    return next;
-  }
-
-  function toggle(symptomId: string, on: boolean) {
-    const next = edit((current) => withFlag(current, symptomId, on));
-    clearTimeout(noteTimer);
-    queue.push({ day: day(), entry: next });
-  }
-
-  // Same shape as toggle: a weight is a discrete act, so it saves at once
-  // rather than being debounced like typing.
-  function editWeight(kg: number | null) {
-    const next = edit((current) => withWeight(current, kg));
-    clearTimeout(noteTimer);
-    queue.push({ day: day(), entry: next });
-  }
-
-  function editNote(note: string) {
-    const next = edit((current) => withNote(current, note));
-    const target = day();
-    clearTimeout(noteTimer);
-    noteTimer = setTimeout(() => queue.push({ day: target, entry: next }), NOTE_DEBOUNCE_MS);
-  }
-
-  let picker!: HTMLInputElement;
-
-  const statusText = createMemo(() => {
-    switch (status()) {
-      case "saving":
-        return "lagrer…";
-      case "saved":
-        return "lagret";
-      case "error":
-        return `kunne ikke lagre: ${error()}`;
-      default:
-        return "";
-    }
-  });
-
-  return (
-    <div class="shell">
-      <header class="masthead">
-        <img class="mark" src="/millie-mark.webp" alt="" width="56" height="56" />
-        <div>
-          <h1>Millie</h1>
-          <p>Pinnedyr og Border Collie</p>
-        </div>
-        <Weight day={day()} weight={entry().weight} onSave={editWeight} />
-      </header>
-
-      <nav class="datenav" aria-label="Velg dag">
-        <button
-          type="button"
-          class="chevron"
-          onClick={() => goTo(addDays(day(), -1))}
-          aria-label="Forrige dag"
-        >
-          ‹
-        </button>
-
-        <button type="button" class="current" onClick={() => picker.showPicker()}>
-          {formatLong(day())}
-        </button>
-        <input
-          ref={picker}
-          type="date"
-          value={day()}
-          max={today}
-          tabindex="-1"
-          aria-hidden="true"
-          onChange={(e) => e.currentTarget.value && goTo(e.currentTarget.value)}
-        />
-
-        {day() === today ? (
-          <button
-            type="button"
-            class="chevron"
-            disabled
-            aria-label="Kan ikke gå fram i tid"
-          >
-            ›
-          </button>
-        ) : (
-          <>
-            <button
-              type="button"
-              class="chevron"
-              onClick={() => goTo(addDays(day(), 1))}
-              aria-label="Neste dag"
-            >
-              ›
-            </button>
-            <button type="button" class="today" onClick={() => goTo(today)}>
-              I dag
-            </button>
-          </>
-        )}
-      </nav>
-
-      <Loading fallback={<p class="status">laster…</p>}>
-        <main>
-          <fieldset class="symptoms">
-            <legend>Kryss av for dagen</legend>
-            <For each={SYMPTOMS}>
-              {(symptom) => (
-                // The card is a div rather than a label so the info button can
-                // live inside it: a label must not contain other interactive
-                // content, and a click on it would otherwise toggle the box.
-                <div class="symptom">
-                  <label>
-                    <input
-                      type="checkbox"
-                      checked={isFlagged(entry(), symptom.id)}
-                      onChange={(e) => toggle(symptom.id, e.currentTarget.checked)}
-                    />
-                    <span class="label">{symptom.label}</span>
-                  </label>
-                  <button
-                    type="button"
-                    class="info"
-                    popovertarget={`help-${symptom.id}`}
-                    style={{ "anchor-name": `--anchor-${symptom.id}` }}
-                    aria-label={`Hva betyr ${symptom.label}?`}
-                  >
-                    i
-                  </button>
-                  <div
-                    popover
-                    id={`help-${symptom.id}`}
-                    class="help-pop"
-                    style={{ "position-anchor": `--anchor-${symptom.id}` }}
-                  >
-                    <strong>{symptom.label}</strong>
-                    <span>{symptom.help}</span>
-                  </div>
-                </div>
-              )}
-            </For>
-          </fieldset>
-
-          <label class="note">
-            <span>Notat</span>
-            <textarea
-              ref={noteField}
-              value={entry().note}
-              placeholder="Hva skjedde i dag?"
-              onInput={(e) => editNote(e.currentTarget.value)}
-            />
-          </label>
-
-          <output class="status" data-state={status()} aria-live="polite">
-            {statusText()}
-          </output>
-
-          <Photos
-            day={day()}
-            // A photo makes the day logged, so the charts below are stale.
-            onChange={() => setDataVersion((n) => n + 1)}
-            // What replaces requiring a note: a photo is almost always worth a
-            // sentence, so the cursor goes there rather than a field being
-            // made mandatory. Nothing else in this app blocks on input.
-            onUploaded={() => noteField.focus()}
-          />
-
-          <Trends endDay={today} version={dataVersion()} />
-
-          <Summaries endDay={today} />
-        </main>
-      </Loading>
-
     </div>
   );
 }

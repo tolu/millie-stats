@@ -23,11 +23,24 @@
   --ink-dim: #94a0ae;
   --ink-faint: #5d6773;
 
-  /* The goggles. */
+  /* The goggles. The accent: buttons, focus rings, anything interactive. */
   --blue: #5b93cc;
   --blue-light: #9fc4e3;
   --blue-mid: #4a7fb5;
   --blue-deep: #2b4d70;
+
+  /* One hue per symptom, so a strip, a sparkline or a journal row is
+     identifiable without reading its label.
+     
+     These are distinct HUES, not shades of the goggle blue. Four shades of one
+     blue was the original idea and it does not work — see the note on
+     `Sparkline` in Trends.tsx. All four clear 3:1 against --raised, which is
+     the floor for a mark this small, and they stay muted enough not to fight
+     the accent. Referenced through src/symptoms.ts, never directly. */
+  --sym-gnikking: #5b93cc;
+  --sym-nagging: #52b3a4;
+  --sym-lydsensitiv: #a87fc4;
+  --sym-slow-walk: #d4a96a;
 
   --danger: #d97070;
 
@@ -82,6 +95,16 @@ main {
   display: flex;
   align-items: center;
   gap: 0.75rem;
+}
+
+/* Holds the page's controls. The push-right lives here rather than on the
+   buttons, so every page puts them in the same place however many there are. */
+.masthead-actions {
+  margin-inline-start: auto;
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
 }
 
 .mark {
@@ -574,7 +597,9 @@ main {
 
 .spark-line {
   fill: none;
-  stroke: var(--blue);
+  /* No stroke here on purpose. The colour is a presentation attribute carrying
+     the symptom's own hue, and any CSS rule would outrank it — declaring one
+     here silently painted all four sparklines the same blue. */
   stroke-width: 2;
   stroke-linecap: round;
   stroke-linejoin: round;
@@ -1153,7 +1178,6 @@ main {
    page: it then occupies real space, so it can never land on top of the
    heading at a narrow width. */
 .weight-button {
-  margin-inline-start: auto;
   flex: none;
   font: inherit;
   font-size: 0.8rem;
@@ -1278,4 +1302,155 @@ main {
     background: var(--blue);
     border: 2px solid var(--blue-light);
   }
+}
+
+/* The page toggle. Icon-only, so it matches the weight button's box exactly
+   and its meaning comes from aria-label. */
+.nav-toggle {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  inline-size: 2rem;
+  block-size: 2.15rem;
+  padding: 0;
+  color: var(--ink);
+  background: var(--raised);
+  border: 2px solid var(--line-strong);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--lift-sm);
+  cursor: pointer;
+
+  & svg {
+    inline-size: 1.05rem;
+    block-size: 1.05rem;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+
+  &:active {
+    box-shadow: none;
+    translate: 2px 2px;
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--blue-light);
+    outline-offset: 2px;
+  }
+}
+
+/* ---------- journal ---------- */
+
+.journal {
+  display: grid;
+  gap: 0.6rem;
+}
+
+.journal-heading {
+  margin: 0;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--ink-faint);
+}
+
+.journal-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: var(--gap);
+}
+
+.entry {
+  display: grid;
+  gap: 0.35rem;
+  background: var(--raised);
+  border: 2px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--lift);
+  padding: 0.7rem 0.8rem;
+}
+
+.entry-head {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* The date is the link back into the day. Styled as text rather than a button
+   so a list of them stays quiet, but it is a real button. */
+.entry-day {
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 650;
+  color: var(--ink);
+  background: none;
+  border: 0;
+  border-radius: var(--radius-sm);
+  padding: 0;
+  text-align: start;
+  cursor: pointer;
+
+  &:hover {
+    color: var(--blue-light);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--blue-light);
+    outline-offset: 3px;
+  }
+}
+
+.entry-photos {
+  display: inline-flex;
+  color: var(--ink-faint);
+
+  & svg {
+    inline-size: 0.95rem;
+    block-size: 0.95rem;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+}
+
+/* One day's symptoms. Pushed right so the bars line up down the list and can
+   be read as a column without looking at the dates. */
+.entry-marks {
+  margin-inline-start: auto;
+  flex: none;
+  display: flex;
+  gap: 1.5px;
+}
+
+.entry-mark {
+  inline-size: 8px;
+  block-size: 11px;
+  border-radius: 1.5px;
+}
+
+.entry-note {
+  margin: 0;
+  font-size: 0.85rem;
+  line-height: 1.5;
+  color: var(--ink-dim);
+  text-wrap: pretty;
+  /* Notes are typed with their own line breaks; keep them. */
+  white-space: pre-wrap;
+}
+
+.journal-end {
+  display: grid;
+  gap: 0.5rem;
+  justify-items: start;
+  /* Reserved so the sentinel has height even when the list is complete. */
+  min-block-size: 1.5rem;
+  padding-block: 0.5rem;
 }

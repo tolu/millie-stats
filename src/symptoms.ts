@@ -11,7 +11,7 @@ export type Symptom = {
   readonly id: string;
   readonly label: string;
   readonly help: string;
-  /** Chart colour, from the goggle palette in styles. */
+  /** The symptom's own colour, defined in styles.css. */
   readonly color: string;
 };
 
@@ -20,25 +20,25 @@ export const SYMPTOMS = [
     id: "gnikking",
     label: "Gnikking",
     help: "Rullet og gned seg på ryggen om kvelden",
-    color: "var(--blue)",
+    color: "var(--sym-gnikking)",
   },
   {
     id: "nagging",
     label: "Nagging",
     help: "Nappet og pirket i pelsen ved haleroten",
-    color: "var(--blue-deep)",
+    color: "var(--sym-nagging)",
   },
   {
     id: "lydsensitiv",
     label: "Lydsensitiv",
     help: "Bjeffet på helt vanlige kveldslyder",
-    color: "var(--blue-mid)",
+    color: "var(--sym-lydsensitiv)",
   },
   {
     id: "slow-walk",
     label: "Slow walk",
     help: "Brøt sammen på tur: hodet lavt, ørene stive",
-    color: "var(--blue-light)",
+    color: "var(--sym-slow-walk)",
   },
 ] as const satisfies readonly Symptom[];
 

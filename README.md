@@ -1,8 +1,9 @@
 # Millie – Pinnedyr og Border Collie
 
 A private symptom journal for Millie, a border collie born 28 January 2018.
-Four checkboxes, a note, a weight and up to five photos per day, 30/90-day
-trend charts, and vet-ready summaries written by Claude.
+Four checkboxes, a note, a weight and up to five photos per day, a journal of
+everything written down, 30/90-day trend charts, and vet-ready summaries
+written by Claude.
 
 Live at **https://millie-stats.tolu.workers.dev**
 
@@ -55,6 +56,7 @@ src/symptoms.ts        the four symptoms — the only place one is defined
 src/lib/date.ts        Oslo calendar days
 src/lib/entry.ts       the JSON boundary for a day
 src/lib/trends.ts      windowing and rolling averages
+src/lib/url.ts         the route: which page, which day
 src/lib/weight.ts      kilos, and the interpolation between weigh-ins
 src/lib/writeQueue.ts  serialised saves
 src/lib/photo.ts       photo keys and URL parsing
@@ -65,6 +67,9 @@ src/server/photos.ts   the photo index and its R2 objects
 src/server/photoRoutes.ts  upload, serve and delete
 src/server/prompt.ts   the summary prompt (snapshot-tested)
 src/server/summarise.ts the Claude call
+src/Day.tsx            the day being logged
+src/Journal.tsx        every day that has a note, newest first
+src/Masthead.tsx       the shared header and the page toggle
 src/worker.ts          auth gate, server-function dispatch, document shell
 ```
 
@@ -165,6 +170,13 @@ is the whole point of the JSON payload column. You need one only when:
 - **A weight is one more key in the day's JSON**, so it needed no migration —
   the same property that makes adding a checkbox free. It marks the day logged
   too, unavoidably, since it lives in the row.
+- **Two pages, one route.** `?view=` and `?d=` are orthogonal, so the journal
+  remembers the day you came from. Changing page pushes a history entry and
+  changing day replaces one — Back leaves the journal without walking through
+  every day you browsed.
+- **The journal is read-only.** It shows a photo indicator rather than photos,
+  and its date headings link into the day view, which is the one place that
+  edits anything.
 - **Weight interpolates across unweighed days; symptoms never do.** A day
   nobody weighed her still had a weight; a day nobody logged is genuinely
   unknown. The chart keeps the two honest by marking the measured days with
@@ -248,9 +260,9 @@ never touches a timezone. The exercise found the `?d=` validation gap instead.
 
 ## Testing
 
-`npm test` — 111 tests over dates, serialisation, trend maths, weight
-interpolation, the write queue, session tokens and the prompt. Logic only; no
-component tests.
+`npm test` — 115 tests over dates, serialisation, the route, trend maths,
+weight interpolation, the write queue, session tokens and the prompt. Logic
+only; no component tests.
 
 Every test here was verified to fail without its implementation. Seven deliberate
 mutations, all caught. That is how the `?d=` bug surfaced and how the DST claim

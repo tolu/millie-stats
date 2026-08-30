@@ -158,6 +158,60 @@ export async function listSummaries(limit = 20): Promise<SummaryRecord[]> {
   return results.map(toSummary);
 }
 
+export type NoteRecord = DayRecord & {
+  /** Whether the day has any photos. The journal shows an indicator and links
+   *  to the day; it never renders the photos, so one boolean is enough. */
+  readonly hasPhotos: boolean;
+};
+
+/** A page bigger than this is a scraper, not a reader. */
+const MAX_NOTES = 50;
+
+/**
+ * Days that have a note, newest first, starting strictly before `before`.
+ *
+ * Keyset pagination rather than OFFSET: the cursor is the last day returned,
+ * so a page can never skip or repeat a row even as days are edited underneath.
+ *
+ * `days` has only its primary-key index, so ORDER BY day DESC walks that index
+ * backwards and `day < ?2` is a range start on it — the same trick lastWeight
+ * uses. The json_extract test cannot be indexed, so the scan costs one row per
+ * note-less day passed on the way to a full page. The table holds one row per
+ * day of one dog's life, so that is bounded and small.
+ *
+ * `!= ''` is enough: serializeEntry trims the note before storing, so a
+ * whitespace-only note is already the empty string, and a missing key extracts
+ * as NULL, which also fails the test.
+ *
+ * `limit` comes first so the first page is `listNotes(10)` with nothing in the
+ * cursor slot — no `undefined` ever has to survive the server-function
+ * boundary.
+ */
+export async function listNotes(limit = 10, before?: string): Promise<NoteRecord[]> {
+  // Math.trunc first, and the || 1, because Math.max(1, NaN) is NaN.
+  const size = Math.min(Math.max(1, Math.trunc(limit) || 1), MAX_NOTES);
+  const where =
+    before === undefined
+      ? `json_extract(d.data, '$.note') != ''`
+      : `d.day < ?2 AND json_extract(d.data, '$.note') != ''`;
+  const statement = (await db()).prepare(
+    `SELECT d.day, d.data, d.updated_at,
+            EXISTS (SELECT 1 FROM photos p WHERE p.day = d.day) AS has_photos
+     FROM days d
+     WHERE ${where}
+     ORDER BY d.day DESC
+     LIMIT ?1`,
+  );
+  // Bound rather than interpolated, and the SQL branches instead of binding
+  // NULL — same shape as lastWeight.
+  const bound =
+    before === undefined
+      ? statement.bind(size)
+      : statement.bind(size, assertDay(before, "before"));
+  const { results } = await bound.all<Row & { has_photos: number }>();
+  return results.map((row) => ({ ...toRecord(row), hasPhotos: row.has_photos === 1 }));
+}
+
 /**
  * The day's photos, oldest first. Metadata only — the bytes are served by the
  * worker's /_photo routes, because a server function would have to base64 them

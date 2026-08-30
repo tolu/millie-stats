@@ -96,7 +96,12 @@ export default function Trends(props: Props) {
                     <span class="heat-count">
                       {stats().hits}/{stats().loggedDays}
                     </span>
-                    <Strip series={series()} days={days()} label={symptom.label} />
+                    <Strip
+                      series={series()}
+                      days={days()}
+                      label={symptom.label}
+                      color={symptom.color}
+                    />
                   </>
                 );
               }}
@@ -127,7 +132,11 @@ export default function Trends(props: Props) {
                         {latest() === null ? "–" : `${Math.round((latest() ?? 0) * 100)}%`}
                       </strong>
                     </figcaption>
-                    <Sparkline values={rolling()} label={symptom.label} />
+                    <Sparkline
+                      values={rolling()}
+                      label={symptom.label}
+                      color={symptom.color}
+                    />
                   </figure>
                 );
               }}
@@ -140,13 +149,18 @@ export default function Trends(props: Props) {
 }
 
 /**
- * One symptom's day-by-day strip.
+ * One symptom's day-by-day strip, in that symptom's colour.
  *
- * Three states, not two: a bright cell is a hit, a grey cell is a day that was
- * logged with nothing wrong, and a nearly invisible cell is a day nobody
+ * Three states, not two: a coloured cell is a hit, a grey cell is a day that
+ * was logged with nothing wrong, and a nearly invisible cell is a day nobody
  * filled in. Collapsing the last two would turn gaps into good news.
  */
-function Strip(props: { series: Presence[]; days: string[]; label: string }) {
+function Strip(props: {
+  series: Presence[];
+  days: string[];
+  label: string;
+  color: string;
+}) {
   const CELL = 4;
   const GAP = 1;
   const width = createMemo(() => props.series.length * (CELL + GAP) - GAP);
@@ -169,7 +183,7 @@ function Strip(props: { series: Presence[]; days: string[]; label: string }) {
             rx={1}
             fill={
               value === 1
-                ? "var(--blue)"
+                ? props.color
                 : value === 0
                   ? "var(--line-strong)"
                   : "var(--heat-empty)"
@@ -185,10 +199,11 @@ function Strip(props: { series: Presence[]; days: string[]; label: string }) {
 
 /**
  * Small multiples rather than one four-series chart: four lines overlaid on a
- * phone are unreadable, and four shades of the same blue are indistinguishable.
+ * phone are unreadable. Each carries its symptom's own colour — four shades of
+ * one blue were indistinguishable, which is why the colours are distinct hues.
  * A gap in the data breaks the line instead of being interpolated across.
  */
-function Sparkline(props: { values: (number | null)[]; label: string }) {
+function Sparkline(props: { values: (number | null)[]; label: string; color: string }) {
   const W = 100;
   const H = 28;
 
@@ -220,7 +235,9 @@ function Sparkline(props: { values: (number | null)[]; label: string }) {
     >
       <line x1="0" y1={H} x2={W} y2={H} class="spark-base" />
       <For each={segments()}>
-        {(points) => <polyline points={points} class="spark-line" />}
+        {(points) => (
+          <polyline points={points} class="spark-line" stroke={props.color} />
+        )}
       </For>
     </svg>
   );

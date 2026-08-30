@@ -48,6 +48,33 @@ the same tick — use the setter callback form. Two edits in one tick otherwise
 both build on the same stale value and the second silently drops the first.
 This caused real data loss; `src/lib/writeQueue.ts` exists because of it.
 
+## Two pages, one route
+
+`src/App.tsx` holds only auth; `SignedIn` owns the route and switches between
+`src/Day.tsx` (the day being logged) and `src/Journal.tsx` (every day that has
+a note). Both sit inside the same `<Errored>` boundary. `src/Masthead.tsx` is
+shared, and takes page-specific controls through `children` so day state never
+enters it.
+
+- **The route is `?view=` plus `?d=`, and they are orthogonal.** The journal
+  keeps the day so leaving it returns to the day you came from. Anything other
+  than the exact string `journal` resolves to the day view — an unrecognised
+  `?view=` must land on a working page, not a blank one.
+- **A change of page pushes; a change of day replaces.** That is what makes
+  Back leave the journal without walking through every day browsed with the
+  chevrons.
+- **`Day` reads `props.day`; it must never copy it into a signal.** `<Match>`
+  keeps the component mounted while the day changes, so a copy taken at mount
+  goes stale.
+- **`Day` flushes its pending note on disposal, not just on navigation.** Until
+  a second page existed the debounce always got to fire, so clearing the timer
+  was harmless. Now, typing and immediately leaving discards the write with no
+  request, no error and no trace. Verified by hand: with the flush removed and
+  disposal landing 5ms after a keystroke, the note is simply gone.
+- **The page swap is not wrapped in `startViewTransition`.** It would capture
+  the incoming page's empty state and crossfade into "laster…". Keep the
+  transition where it is, around day-to-day changes.
+
 ## Invariants — breaking these corrupts the record silently
 
 - **An unlogged day is `null`, never `0`.** A missing row means nobody filled
@@ -97,6 +124,26 @@ This caused real data loss; `src/lib/writeQueue.ts` exists because of it.
 - **Image bytes never go through a server function.** Arguments are serialised,
   so it would mean base64 and a 33% penalty on the slowest leg. `/_photo` is a
   plain worker route; only the photo *list* is a server function.
+- **The journal's list is fetched imperatively, never through a suspending
+  memo.** A memo that read the cursor would return a new promise per page and
+  every downstream read would suspend, blanking the whole accumulated list on
+  each "load more" — the trap `Photos.tsx` documents. Its paging guards are
+  plain variables rather than signals for the same reason `edit` uses the
+  setter callback: they are read back in the tick they are written.
+- **Infinite scroll measures the sentinel, it does not trust the observer's
+  flag.** `IntersectionObserver` reports asynchronously, so straight after a
+  page is appended the flag still says "visible" even though the new rows have
+  pushed the sentinel off screen. Trusting it loaded three pages before the
+  list had been scrolled once.
+- **Each symptom has its own hue** (`--sym-*` in styles.css, referenced through
+  `src/symptoms.ts`). Four shades of one blue were indistinguishable; four
+  distinct hues are not. The colour is a presentation attribute on the SVG, so
+  no CSS rule may set `stroke`/`fill` for those marks — a rule outranks the
+  attribute and silently repaints every chart the same colour.
+- **The journal's marks have two states, not three.** Trends' third state is
+  "nobody logged this day", and every journal row has a note, so it is a logged
+  day by construction. Listing days without notes would bring the third state
+  back.
 - **Expected server-function failures are returned, not thrown.** Solid does
   not propagate error messages to the client, so a throw reaches the UI as
   "Internal Server Error". Return `{ ok: false, message }` for anything the

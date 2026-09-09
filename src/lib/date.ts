@@ -86,6 +86,15 @@ export function weekdayIndex(day: string): number {
   return new Date(toEpochDay(day) * 86_400_000).getUTCDay();
 }
 
+/**
+ * The Monday of the calendar week `day` falls in. Weekly targets count
+ * Monday to Sunday, so this is the only week boundary in the app.
+ */
+export function startOfWeek(day: string): string {
+  // weekdayIndex is Sunday-first; rotate so Monday is 0.
+  return addDays(day, -((weekdayIndex(day) + 6) % 7));
+}
+
 export function isWeekend(day: string): boolean {
   const w = weekdayIndex(day);
   return w === 0 || w === 6;

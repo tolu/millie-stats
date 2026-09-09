@@ -707,6 +707,15 @@ main {
   margin-block-end: 0;
 }
 
+/* Weekly bars for a workout, in the heat card. Taller than a strip: the
+   height is the data. */
+.week-bars {
+  grid-column: 1 / -1;
+  inline-size: 100%;
+  block-size: 2.75rem;
+  shape-rendering: crispEdges;
+}
+
 .sparks {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
@@ -1557,6 +1566,21 @@ main {
   &:focus-visible {
     outline: 2px solid var(--blue-light);
     outline-offset: 3px;
+  }
+}
+
+.entry-workout {
+  display: inline-flex;
+  color: var(--wk);
+
+  & svg {
+    inline-size: 0.95rem;
+    block-size: 0.95rem;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 3;
+    stroke-linecap: round;
+    stroke-linejoin: round;
   }
 }
 

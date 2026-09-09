@@ -1,9 +1,9 @@
 # Millie – Pinnedyr og Border Collie
 
 A private symptom journal for Millie, a border collie born 28 January 2018.
-Four checkboxes, a note, a weight and up to five photos per day, a journal of
-everything written down, 30/90-day trend charts, and vet-ready summaries
-written by Claude.
+Four checkboxes, a note, a weight, up to five photos and the day's workouts
+ticked off against a weekly target, a journal of everything written down,
+30/90-day trend charts, and vet-ready summaries written by Claude.
 
 Live at **https://millie-stats.tolu.workers.dev**
 
@@ -58,6 +58,7 @@ src/lib/entry.ts       the JSON boundary for a day
 src/lib/trends.ts      windowing and rolling averages
 src/lib/url.ts         the route: which page, which day
 src/lib/weight.ts      kilos, and the interpolation between weigh-ins
+src/lib/workouts.ts    what a workout is, when it applies, how a week scores
 src/lib/writeQueue.ts  serialised saves
 src/lib/photo.ts       photo keys and URL parsing
 src/lib/image.ts       client-side resize and re-encode
@@ -68,6 +69,7 @@ src/server/photoRoutes.ts  upload, serve and delete
 src/server/prompt.ts   the summary prompt (snapshot-tested)
 src/server/summarise.ts the Claude call
 src/Day.tsx            the day being logged
+src/Workouts.tsx       the day's workouts, their week, and the dialog defining them
 src/Journal.tsx        every day that has a note, newest first
 src/Masthead.tsx       the shared header and the page toggle
 src/worker.ts          auth gate, server-function dispatch, document shell
@@ -185,6 +187,16 @@ is the whole point of the JSON payload column. You need one only when:
 - **Photos live outside `days.data`.** Every save carries the whole day, so a
   photo inside that payload would race the note debounce and be clobbered by
   it.
+- **A workout tick is one more key in the day's JSON; the workout itself is a
+  row in `workouts`.** The tick rides the same queued whole-day save as a
+  checkbox, so it can never race the note. The definition is the first thing in
+  the app the user edits rather than a constant in code, which is why it got a
+  table (`migrations/0004`). Rows are never deleted — their ids are in the days
+  that ticked them — so retiring sets an end date.
+- **A workout has two states, not three.** A symptom on an unlogged day is
+  unknown; a workout on an unlogged day is a missed session, because the target
+  is a count. The only "not counted" state is a whole week outside the
+  workout's dates, which the chart leaves blank rather than drawing as zero.
 - **Auth is enforced at the worker**, not per server function. One gate fails
   closed by construction; a check repeated everywhere fails open the first time
   someone forgets one.
@@ -260,9 +272,9 @@ never touches a timezone. The exercise found the `?d=` validation gap instead.
 
 ## Testing
 
-`npm test` — 115 tests over dates, serialisation, the route, trend maths,
-weight interpolation, the write queue, session tokens and the prompt. Logic
-only; no component tests.
+`npm test` — 137 tests over dates, serialisation, the route, trend maths,
+weight interpolation, weekly workouts, the write queue, session tokens and the
+prompt. Logic only; no component tests.
 
 Every test here was verified to fail without its implementation. Seven deliberate
 mutations, all caught. That is how the `?d=` bug surfaced and how the DST claim

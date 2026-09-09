@@ -219,22 +219,24 @@ function WeekBars(props: { workout: Workout; bars: WeekBar[]; endDay: string }) 
       >
         <For each={props.bars}>
           {(bar, index) => {
-            const x = index() * (BAR + GAP);
+            // Reactive reads stay inside JSX: read directly in a <For> callback
+            // they would not update. `bar` itself is plain data.
+            const x = () => index() * (BAR + GAP);
             if (bar === null) {
-              return <rect x={x} y={0} width={BAR} height={H} fill="var(--heat-empty)" opacity="0.5" />;
+              return <rect x={x()} y={0} width={BAR} height={H} fill="var(--heat-empty)" opacity="0.5" />;
             }
             const height = (Math.min(bar.done, bar.target) / bar.target) * H;
-            const current = bar.weekStart === currentWeek();
+            const current = () => bar.weekStart === currentWeek();
             return (
               <>
-                <rect x={x} y={0} width={BAR} height={H} fill="var(--heat-empty)" />
+                <rect x={x()} y={0} width={BAR} height={H} fill="var(--heat-empty)" />
                 <rect
-                  x={x}
+                  x={x()}
                   y={H - height}
                   width={BAR}
                   height={height}
                   fill={bar.done >= bar.target ? "var(--wk)" : "var(--line-strong)"}
-                  fill-opacity={current ? "0.45" : "1"}
+                  fill-opacity={current() ? "0.45" : "1"}
                 >
                   <title>
                     {formatShort(bar.weekStart)}–{formatShort(addDays(bar.weekStart, 6))}: {bar.done} av {bar.target}

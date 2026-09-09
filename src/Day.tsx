@@ -1,13 +1,14 @@
 import { createMemo, createSignal, For, Loading, onSettled, untrack } from "solid-js";
 import { SYMPTOMS } from "./symptoms";
 import { addDays, formatLong } from "./lib/date";
-import { EMPTY_ENTRY, isFlagged, withFlag, withNote, withWeight } from "./lib/entry";
+import { EMPTY_ENTRY, isFlagged, withFlag, withNote, withWeight, withWorkout } from "./lib/entry";
 import type { DayEntry } from "./lib/entry";
 import { createWriteQueue } from "./lib/writeQueue";
 import type { WriteState } from "./lib/writeQueue";
 import Masthead from "./Masthead";
 import Photos from "./Photos";
 import Weight from "./Weight";
+import Workouts from "./Workouts";
 import Trends from "./Trends";
 import Summaries from "./Summaries";
 import { getDay, saveDay } from "./server/db";
@@ -134,6 +135,13 @@ export default function Day(props: {
     queue.push({ day: day(), entry: next });
   }
 
+  // A tick, like a checkbox: saved at once, carrying whatever note is pending.
+  function toggleWorkout(workoutId: string, done: boolean) {
+    const next = edit((current) => withWorkout(current, workoutId, done));
+    clearTimeout(noteTimer);
+    queue.push({ day: day(), entry: next });
+  }
+
   function editNote(note: string) {
     const next = edit((current) => withNote(current, note));
     const target = day();
@@ -251,6 +259,15 @@ export default function Day(props: {
               )}
             </For>
           </fieldset>
+
+          <Workouts
+            day={day()}
+            today={today()}
+            entry={entry()}
+            onToggle={toggleWorkout}
+            // A definition changed, so the weekly bars below are stale.
+            onChanged={() => setDataVersion((n) => n + 1)}
+          />
 
           <label class="note">
             <span>Notat</span>

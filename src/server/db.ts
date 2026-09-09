@@ -3,6 +3,7 @@
 import { isDay } from "../lib/date";
 import { type DayEntry, isWeight, parseEntry, serializeEntry } from "../lib/entry";
 import type { Measurement } from "../lib/weight";
+import { validateWorkout, type Workout, type WorkoutInput } from "../lib/workouts";
 import { deletePhotosForDay, listPhotos, type PhotoRecord } from "./photos";
 
 // The binding is reached through a lazy dynamic import rather than a top-level
@@ -257,4 +258,98 @@ export async function clearDay(day: string): Promise<void> {
   assertDay(day, "day");
   await deletePhotosForDay(await db(), await bucket(), day);
   await (await db()).prepare(`DELETE FROM days WHERE day = ?1`).bind(day).run();
+}
+
+// ---------- workouts ----------
+
+type WorkoutRow = {
+  id: string;
+  name: string;
+  description: string;
+  per_week: number;
+  start_day: string;
+  end_day: string | null;
+};
+
+function toWorkout(row: WorkoutRow): Workout {
+  return {
+    id: row.id,
+    name: row.name,
+    description: row.description,
+    perWeek: row.per_week,
+    startDay: row.start_day,
+    endDay: row.end_day,
+  };
+}
+
+const WORKOUT_COLUMNS = `id, name, description, per_week, start_day, end_day`;
+
+/** Every workout ever defined, retired ones included, oldest first. The
+ *  client decides what applies to a day; a retired one still owns its ticks. */
+export async function listWorkouts(): Promise<Workout[]> {
+  const { results } = await (await db())
+    .prepare(`SELECT ${WORKOUT_COLUMNS} FROM workouts ORDER BY created_at ASC, id ASC`)
+    .all<WorkoutRow>();
+  return results.map(toWorkout);
+}
+
+async function findWorkout(id: string): Promise<WorkoutRow | null> {
+  return (await db())
+    .prepare(`SELECT ${WORKOUT_COLUMNS} FROM workouts WHERE id = ?1`)
+    .bind(id)
+    .first<WorkoutRow>();
+}
+
+/** Returned, not thrown, so the dialog can show the message. */
+export type WorkoutReply = { ok: true; workout: Workout } | { ok: false; message: string };
+
+/**
+ * Creates (`id: null`) or edits one workout. The id is null rather than
+ * undefined so nothing has to survive the server-function boundary as a
+ * missing argument.
+ */
+export async function saveWorkout(input: WorkoutInput & { id: string | null }): Promise<WorkoutReply> {
+  const checked = validateWorkout(input);
+  if (!checked.ok) return checked;
+  const { name, description, perWeek, startDay } = checked.value;
+  const now = new Date().toISOString();
+  const database = await db();
+
+  if (input.id === null) {
+    const id = crypto.randomUUID();
+    await database
+      .prepare(
+        `INSERT INTO workouts (id, name, description, per_week, start_day, end_day, created_at, updated_at)
+         VALUES (?1, ?2, ?3, ?4, ?5, NULL, ?6, ?6)`,
+      )
+      .bind(id, name, description, perWeek, startDay, now)
+      .run();
+    return { ok: true, workout: { id, name, description, perWeek, startDay, endDay: null } };
+  }
+
+  const { meta } = await database
+    .prepare(
+      `UPDATE workouts SET name = ?2, description = ?3, per_week = ?4, start_day = ?5, updated_at = ?6
+       WHERE id = ?1`,
+    )
+    .bind(input.id, name, description, perWeek, startDay, now)
+    .run();
+  if (meta.changes === 0) return { ok: false, message: "Fant ikke øvelsen" };
+  const row = await findWorkout(input.id);
+  return row ? { ok: true, workout: toWorkout(row) } : { ok: false, message: "Fant ikke øvelsen" };
+}
+
+/** Sets the last day the workout applies. Its ticks and its weeks stay. */
+export async function retireWorkout(id: string, endDay: string): Promise<WorkoutReply> {
+  assertDay(endDay, "endDay");
+  const row = await findWorkout(id);
+  if (!row) return { ok: false, message: "Fant ikke øvelsen" };
+  if (endDay < row.start_day) {
+    return { ok: false, message: "Kan ikke avslutte før startdatoen" };
+  }
+  await (await db())
+    .prepare(`UPDATE workouts SET end_day = ?2, updated_at = ?3 WHERE id = ?1`)
+    .bind(id, endDay, new Date().toISOString())
+    .run();
+  return { ok: true, workout: toWorkout({ ...row, end_day: endDay }) };
 }

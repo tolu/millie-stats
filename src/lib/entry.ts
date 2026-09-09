@@ -16,6 +16,17 @@ export type DayEntry = {
    * written as 0. At most one measurement per day.
    */
   readonly weight?: number;
+  /**
+   * Workouts done that day, keyed by workout id (a uuid from the `workouts`
+   * table, written here and never changed). Only `true` is stored and the key
+   * is absent when nothing was done, like `weight`.
+   *
+   * Two states, not three. A symptom on an unlogged day is unknown, but a
+   * workout on an unlogged day is a missed session: the weekly target is a
+   * count, and a day nobody ticked was a day it was not done. Ticking a
+   * never-logged day creates its row — the same accepted cost as a weight.
+   */
+  readonly workouts?: Readonly<Record<string, true>>;
 };
 
 export const EMPTY_ENTRY: DayEntry = { flags: {}, note: "" };
@@ -65,10 +76,34 @@ export function withWeight(entry: DayEntry, kg: number | null): DayEntry {
   return { ...entry, weight: roundKg(kg) };
 }
 
+export function isWorkoutDone(entry: DayEntry, workoutId: string): boolean {
+  return entry.workouts?.[workoutId] === true;
+}
+
+/** The ids of the workouts done that day, in stored order. */
+export function workoutsDone(entry: DayEntry): string[] {
+  return Object.keys(entry.workouts ?? {});
+}
+
+/** Ticks or unticks one workout for the day. */
+export function withWorkout(entry: DayEntry, workoutId: string, done: boolean): DayEntry {
+  const workouts: Record<string, true> = { ...entry.workouts };
+  if (done) workouts[workoutId] = true;
+  else delete workouts[workoutId];
+  if (Object.keys(workouts).length === 0) {
+    // Deleted rather than left empty, so a day whose last tick was cleared and
+    // a day that never had one serialize identically.
+    const next: { flags: DayEntry["flags"]; note: string; weight?: number; workouts?: Readonly<Record<string, true>> } = { ...entry };
+    delete next.workouts;
+    return next;
+  }
+  return { ...entry, workouts };
+}
+
 /** True when the day carries no information at all. */
 export function isBlank(entry: DayEntry): boolean {
   return entry.note.trim() === "" && Object.keys(entry.flags).length === 0 &&
-    entry.weight === undefined;
+    entry.weight === undefined && workoutsDone(entry).length === 0;
 }
 
 /** Drops false flags and trims the note, so stored rows stay minimal. */
@@ -79,11 +114,13 @@ export function serializeEntry(entry: DayEntry): string {
   }
   // The weight key is omitted entirely when unset, so a day without one
   // serializes byte-for-byte as it did before weights existed.
-  const out: { flags: typeof flags; note: string; weight?: number } = {
+  const out: { flags: typeof flags; note: string; weight?: number; workouts?: Record<string, true> } = {
     flags,
     note: entry.note.trim(),
   };
   if (isWeight(entry.weight)) out.weight = roundKg(entry.weight);
+  const workouts = onlyTrue(entry.workouts);
+  if (workouts) out.workouts = workouts;
   return JSON.stringify(out);
 }
 
@@ -112,6 +149,26 @@ export function parseEntry(json: string): DayEntry {
   // A junk weight is dropped rather than thrown on, same as a junk flag: one
   // bad row must not take the journal down.
   const rawWeight = record["weight"];
-  if (isWeight(rawWeight)) return { flags, note, weight: roundKg(rawWeight) };
-  return { flags, note };
+  const workouts = onlyTrue(record["workouts"]);
+  const out: { flags: typeof flags; note: string; weight?: number; workouts?: Record<string, true> } = {
+    flags,
+    note,
+  };
+  if (isWeight(rawWeight)) out.weight = roundKg(rawWeight);
+  if (workouts) out.workouts = workouts;
+  return out;
+}
+
+/**
+ * The `true`-only map behind both flags and workouts: keeps the keys whose
+ * value is exactly `true`, and returns undefined rather than an empty object
+ * so callers can omit the key. Junk (a string, an array, `1`) yields nothing.
+ */
+function onlyTrue(raw: unknown): Record<string, true> | undefined {
+  if (typeof raw !== "object" || raw === null || Array.isArray(raw)) return undefined;
+  const out: Record<string, true> = {};
+  for (const [id, on] of Object.entries(raw as Record<string, unknown>)) {
+    if (on === true) out[id] = true;
+  }
+  return Object.keys(out).length > 0 ? out : undefined;
 }

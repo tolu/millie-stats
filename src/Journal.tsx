@@ -1,6 +1,6 @@
 import { createMemo, createSignal, For, onSettled, Show } from "solid-js";
 import { formatLong } from "./lib/date";
-import { isFlagged } from "./lib/entry";
+import { isFlagged, workoutsDone } from "./lib/entry";
 import type { DayEntry } from "./lib/entry";
 import { SYMPTOMS } from "./symptoms";
 import Masthead from "./Masthead";
@@ -164,6 +164,15 @@ function Entry(props: { row: NoteRecord; onOpen: (day: string) => void }) {
               <rect x="3" y="5" width="18" height="14" rx="2" />
               <circle cx="8.5" cy="10" r="1.5" />
               <path d="M21 16l-5-5-6 6" />
+            </svg>
+          </span>
+        </Show>
+        {/* A tick is an act, not an observation, so it sits apart from the
+            symptom bars and in its own colour. */}
+        <Show when={workoutsDone(props.row.entry).length > 0}>
+          <span class="entry-workout" role="img" aria-label="Øvelse gjort">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M5 12l5 5 9-10" />
             </svg>
           </span>
         </Show>

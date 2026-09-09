@@ -11,6 +11,7 @@ import {
   osloDay,
   rangeDays,
   toEpochDay,
+  startOfWeek,
   weekdayIndex,
 } from "./date";
 
@@ -148,5 +149,29 @@ describe("weekdays and formatting", () => {
     expect(formatShort("2026-08-26")).toContain("26");
     expect(formatShort("2026-01-01")).toContain("1");
     expect(formatWeekday("2026-08-26")).toBeTruthy();
+  });
+});
+
+describe("startOfWeek", () => {
+  it("is Monday-first, whatever the weekday", () => {
+    expect(startOfWeek("2026-09-07")).toBe("2026-09-07"); // Monday maps to itself
+    expect(startOfWeek("2026-09-09")).toBe("2026-09-07"); // Wednesday
+    expect(startOfWeek("2026-09-13")).toBe("2026-09-07"); // Sunday belongs to the week before
+  });
+
+  it("crosses month and year boundaries", () => {
+    expect(startOfWeek("2027-01-01")).toBe("2026-12-28"); // a Friday
+    expect(startOfWeek("2026-10-01")).toBe("2026-09-28");
+  });
+
+  it("is unmoved by the clock changes", () => {
+    // Both 2026 DST Sundays. Local-time arithmetic here can land on Saturday
+    // evening and shift the whole week back a day.
+    expect(startOfWeek("2026-03-29")).toBe("2026-03-23");
+    expect(startOfWeek("2026-10-25")).toBe("2026-10-19");
+  });
+
+  it("throws on bad input like the rest of the module", () => {
+    expect(() => startOfWeek("2026-02-31")).toThrow();
   });
 });

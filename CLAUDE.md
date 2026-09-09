@@ -118,6 +118,21 @@ enters it.
   also makes the ordering against a concurrent queued save irrelevant in both
   directions. "Logged" still means exactly one thing everywhere: a row in
   `days`.
+- **Workout ticks live in `days.data` as a true-only map keyed by workout id;
+  the definitions live in the `workouts` table.** A tick follows the `weight`
+  pattern in `entry.ts` (spread, key absent when empty) and saves through the
+  same queue as a checkbox. Definitions are rows because the user edits them;
+  never delete one — its id is in the days that ticked it — set `end_day`
+  instead. `0004_workouts` only adds a table: migrate first, then deploy.
+- **A workout has two states, not three.** An unlogged day is a missed
+  session, not unknown: the weekly target is a count. A week entirely outside
+  the workout's start and end is `null` (not counted) and drawn blank.
+- **Nothing read inside `Day`'s `<main>` may be a suspending memo keyed on
+  `dataVersion`.** The whole of `<main>` sits in one `<Loading>`, so a memo
+  that re-suspends after every save blanks the page. `Workouts.tsx` keys its
+  fetches on the day and applies edits through an overlay signal, the way
+  `Photos.tsx` does; only `Trends`, which has its own `<Loading>`, refetches
+  on `version`.
 - **Photos never go in `days.data`.** Every save carries the whole day, so a
   photo in that payload would race the note debounce — the same class of bug
   `writeQueue` exists to prevent. They live in their own table, keyed by day.
@@ -169,7 +184,8 @@ real compile step.
 
 ## Testing
 
-Logic only — dates, serialisation, trends, the write queue, tokens, the prompt.
+Logic only — dates, serialisation, trends, weekly workouts, the write queue,
+tokens, the prompt.
 No component tests.
 
 **Every bug fix gets a test, and the test must be verified to fail without the

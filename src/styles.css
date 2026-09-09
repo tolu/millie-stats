@@ -42,6 +42,11 @@
   --sym-lydsensitiv: #a87fc4;
   --sym-slow-walk: #d4a96a;
 
+  /* The colour of "done". A workout tick is an act, not an observation, so it
+     gets its own hue rather than borrowing a symptom's — a green journal mark
+     next to four symptom bars reads as a different kind of thing. */
+  --wk: #86bf6e;
+
   --danger: #d97070;
 
   --radius: 12px;
@@ -391,6 +396,155 @@ main {
 }
 
 
+/* ---------- workouts ---------- */
+
+.workouts {
+  display: grid;
+  gap: var(--gap);
+
+  & h2 {
+    margin: 0;
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--ink-faint);
+  }
+}
+
+.workouts-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+/* A symptom tile with two more things in it: the week's count under the name
+   and seven cells for the week. Everything else — the checkbox, the ⓘ, the
+   popover, the checked state — is the symptom's own rules. */
+.workout {
+  &:has(:checked) {
+    border-color: var(--wk);
+    background: color-mix(in oklab, var(--wk) 12%, var(--raised));
+  }
+
+  & input[type="checkbox"]:checked {
+    background: var(--wk);
+    border-color: color-mix(in oklab, var(--wk) 70%, white);
+  }
+}
+
+.workout-text {
+  min-inline-size: 0;
+  display: grid;
+  gap: 0.1rem;
+}
+
+.workout-count {
+  font-size: 0.75rem;
+  color: var(--ink-dim);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.week-marks {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  flex: none;
+  display: flex;
+  gap: 0.25rem;
+  margin-inline-end: 0.5rem;
+}
+
+.week-mark {
+  display: grid;
+  justify-items: center;
+  gap: 0.2rem;
+  font-size: 0.55rem;
+  line-height: 1;
+  color: var(--ink-faint);
+
+  /* The cell. Done is the workout colour; missed is the grey a logged-clear
+     symptom day uses; still to come and outside the workout's dates are the
+     never-logged tone, so they do not read as misses. */
+  &::before {
+    content: "";
+    inline-size: 10px;
+    block-size: 12px;
+    border-radius: 2px;
+    background: var(--heat-empty);
+  }
+  &[data-state="done"]::before {
+    background: var(--wk);
+  }
+  &[data-state="missed"]::before {
+    background: var(--line-strong);
+  }
+  &[data-state="outside"]::before {
+    visibility: hidden;
+  }
+  &[data-current="true"] {
+    color: var(--ink);
+  }
+  &[data-current="true"]::before {
+    outline: 1.5px solid var(--ink);
+    outline-offset: 1px;
+  }
+}
+
+.workout-pop {
+  & .workout-description {
+    /* Instructions are typed with their own line breaks; keep them. */
+    white-space: pre-line;
+  }
+  & button {
+    justify-self: start;
+    margin-block-start: 0.35rem;
+  }
+}
+
+.workout-dialog {
+  max-inline-size: min(92vw, 26rem);
+  inline-size: 100%;
+}
+
+.workout-field {
+  display: grid;
+  gap: 0.3rem;
+
+  & > span {
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--ink-faint);
+  }
+
+  & input,
+  & textarea {
+    font: inherit;
+    color: var(--ink);
+    background: var(--paper);
+    border: 2px solid var(--line);
+    border-radius: var(--radius-sm);
+    padding: 0.5rem 0.7rem;
+    min-inline-size: 0;
+
+    &:focus-visible {
+      outline: 2px solid var(--blue-light);
+      outline-offset: 1px;
+    }
+  }
+
+  & textarea {
+    resize: none;
+    field-sizing: content;
+    min-block-size: 5rem;
+    max-block-size: 40vh;
+  }
+}
+
 /* ---------- note ---------- */
 
 .note {
@@ -551,6 +705,15 @@ main {
 
 .heat > :nth-last-child(1) {
   margin-block-end: 0;
+}
+
+/* Weekly bars for a workout, in the heat card. Taller than a strip: the
+   height is the data. */
+.week-bars {
+  grid-column: 1 / -1;
+  inline-size: 100%;
+  block-size: 2.75rem;
+  shape-rendering: crispEdges;
 }
 
 .sparks {
@@ -1403,6 +1566,21 @@ main {
   &:focus-visible {
     outline: 2px solid var(--blue-light);
     outline-offset: 3px;
+  }
+}
+
+.entry-workout {
+  display: inline-flex;
+  color: var(--wk);
+
+  & svg {
+    inline-size: 0.95rem;
+    block-size: 0.95rem;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 3;
+    stroke-linecap: round;
+    stroke-linejoin: round;
   }
 }
 

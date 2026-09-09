@@ -1,12 +1,14 @@
 import { createMemo, createSignal, For, Loading, Show } from "solid-js";
 import { SYMPTOMS } from "./symptoms";
-import { formatShort, lastNDays } from "./lib/date";
+import { addDays, formatShort, lastNDays, rangeDays, startOfWeek } from "./lib/date";
 import type { DayEntry } from "./lib/entry";
 import { coverage, rollingAverage, seriesFor, statsFor } from "./lib/trends";
 import type { EntriesByDay, Presence } from "./lib/trends";
 import { BASELINE_KG, formatKg, weightView } from "./lib/weight";
 import type { Measurement, WeightPoint } from "./lib/weight";
-import { getRange, lastWeight } from "./server/db";
+import { weeklySeries } from "./lib/workouts";
+import type { WeekBar, Workout } from "./lib/workouts";
+import { getRange, lastWeight, listWorkouts } from "./server/db";
 
 const ROLLING_WINDOW = 7;
 
@@ -27,23 +29,41 @@ export default function Trends(props: Props) {
   // separate one-row query rather than a wider range fetch: the chart needs
   // one measurement, not months of extra days, and a bounded query cannot miss
   // one that happens to fall outside an arbitrary lookback.
+  // The weekly bars want whole weeks, so the fetch starts on the Monday of
+  // the window's first week. Everything else iterates `days()` and is unmoved.
+  const weekDays = createMemo(() => {
+    const first = days()[0];
+    const last = days().at(-1);
+    return first && last ? rangeDays(startOfWeek(first), last) : [];
+  });
+
   const data = createMemo(async () => {
     props.version; // re-read after a save
     const span = days();
-    const first = span[0];
+    const first = weekDays()[0];
     const last = span.at(-1);
     if (!first || !last) {
-      return { entries: new Map<string, DayEntry>(), anchor: null };
+      return { entries: new Map<string, DayEntry>(), anchor: null, workouts: [] as Workout[] };
     }
-    const [records, anchor] = await Promise.all([
+    const [records, anchor, workouts] = await Promise.all([
       getRange(first, last),
       lastWeight(first),
+      listWorkouts(),
     ]);
-    return { entries: new Map(records.map((r) => [r.day, r.entry])), anchor };
+    return { entries: new Map(records.map((r) => [r.day, r.entry])), anchor, workouts };
   });
 
   const entries = createMemo(() => data().entries);
   const anchor = createMemo(() => data().anchor);
+  // One series per workout, dropping those with no week in the window.
+  const weeks = createMemo(() =>
+    data()
+      .workouts.map((workout) => ({
+        workout,
+        bars: weeklySeries(workout, weekDays(), entries()),
+      }))
+      .filter(({ bars }) => bars.some((bar) => bar !== null)),
+  );
 
   const cover = createMemo(() => coverage(days(), entries()));
 
@@ -142,9 +162,92 @@ export default function Trends(props: Props) {
               }}
             </For>
           </div>
+
+          <Show when={weeks().length > 0}>
+            <h3>Øvelser per uke</h3>
+            <For each={weeks()}>
+              {({ workout, bars }) => (
+                <WeekBars workout={workout} bars={bars} endDay={props.endDay} />
+              )}
+            </For>
+          </Show>
         </Show>
       </Loading>
     </section>
+  );
+}
+
+/**
+ * One workout's weeks as bars against its target. A bar reaching the top is a
+ * week on target; the faint block behind it is the target itself, so what is
+ * missing shows as empty space. The week still going is toned down — it is
+ * not a miss until it is over — and a week outside the workout's dates is
+ * left empty rather than drawn as zero.
+ */
+function WeekBars(props: { workout: Workout; bars: WeekBar[]; endDay: string }) {
+  const BAR = 8;
+  const GAP = 2;
+  const H = 10;
+  const width = createMemo(() => props.bars.length * (BAR + GAP) - GAP);
+  const currentWeek = createMemo(() => startOfWeek(props.endDay));
+
+  const tally = createMemo(() => {
+    let onTarget = 0;
+    let finished = 0;
+    for (const bar of props.bars) {
+      if (bar === null || bar.weekStart === currentWeek()) continue;
+      finished++;
+      if (bar.done >= bar.target) onTarget++;
+    }
+    return { onTarget, finished };
+  });
+
+  return (
+    <div class="heat">
+      <span class="heat-name">{props.workout.name}</span>
+      <span class="heat-count">
+        {tally().finished === 0
+          ? `mål ${props.workout.perWeek} i uka`
+          : `på mål ${tally().onTarget} av ${tally().finished} uker`}
+      </span>
+      <svg
+        class="week-bars"
+        viewBox={`0 0 ${width()} ${H}`}
+        preserveAspectRatio="none"
+        role="img"
+        aria-label={`${props.workout.name}, uke for uke mot ${props.workout.perWeek} i uka`}
+      >
+        <For each={props.bars}>
+          {(bar, index) => {
+            // Reactive reads stay inside JSX: read directly in a <For> callback
+            // they would not update. `bar` itself is plain data.
+            const x = () => index() * (BAR + GAP);
+            if (bar === null) {
+              return <rect x={x()} y={0} width={BAR} height={H} fill="var(--heat-empty)" opacity="0.5" />;
+            }
+            const height = (Math.min(bar.done, bar.target) / bar.target) * H;
+            const current = () => bar.weekStart === currentWeek();
+            return (
+              <>
+                <rect x={x()} y={0} width={BAR} height={H} fill="var(--heat-empty)" />
+                <rect
+                  x={x()}
+                  y={H - height}
+                  width={BAR}
+                  height={height}
+                  fill={bar.done >= bar.target ? "var(--wk)" : "var(--line-strong)"}
+                  fill-opacity={current() ? "0.45" : "1"}
+                >
+                  <title>
+                    {formatShort(bar.weekStart)}–{formatShort(addDays(bar.weekStart, 6))}: {bar.done} av {bar.target}
+                  </title>
+                </rect>
+              </>
+            );
+          }}
+        </For>
+      </svg>
+    </div>
   );
 }
 

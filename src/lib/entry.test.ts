@@ -6,8 +6,11 @@ import {
   parseEntry,
   serializeEntry,
   withFlag,
+  isWorkoutDone,
   withNote,
   withWeight,
+  withWorkout,
+  workoutsDone,
 } from "./entry";
 
 describe("serialization", () => {
@@ -129,5 +132,63 @@ describe("weight", () => {
   it("keeps flags and the note when the weight changes", () => {
     const day = { flags: { gnikking: true }, note: "notat" };
     expect(withWeight(day, 17)).toEqual({ flags: { gnikking: true }, note: "notat", weight: 17 });
+  });
+});
+
+describe("workouts", () => {
+  const id = "3f1c0c2e-6d2a-4b8e-9a7d-1f0e2d3c4b5a";
+
+  it("round-trips a day the workout was done", () => {
+    const entry = { flags: { nagging: true }, note: "øvelser", workouts: { [id]: true as const } };
+    expect(parseEntry(serializeEntry(entry))).toEqual(entry);
+  });
+
+  it("omits the key entirely when nothing was done", () => {
+    // Same rule as weight: a day without a tick must serialize byte-for-byte
+    // as it did before workouts existed.
+    expect(serializeEntry({ flags: {}, note: "" })).toBe('{"flags":{},"note":""}');
+    expect(parseEntry('{"flags":{},"note":""}').workouts).toBeUndefined();
+  });
+
+  it("removes the key when the last tick is cleared", () => {
+    const done = withWorkout(EMPTY_ENTRY, id, true);
+    expect(isWorkoutDone(done, id)).toBe(true);
+    const cleared = withWorkout(done, id, false);
+    expect("workouts" in cleared).toBe(false);
+    expect(serializeEntry(cleared)).toBe('{"flags":{},"note":""}');
+  });
+
+  it("drops junk ticks rather than throwing", () => {
+    for (const bad of ["1", '"yes"', "null", "[]", '{"x":false}', '{"x":1}']) {
+      const parsed = parseEntry(`{"flags":{},"note":"","workouts":${bad}}`);
+      expect(parsed.workouts).toBeUndefined();
+    }
+    expect(parseEntry(`{"flags":{},"note":"","workouts":{"${id}":true,"junk":"yes"}}`).workouts)
+      .toEqual({ [id]: true });
+  });
+
+  it("lists the ids done that day", () => {
+    expect(workoutsDone(EMPTY_ENTRY)).toEqual([]);
+    expect(workoutsDone(withWorkout(withWorkout(EMPTY_ENTRY, "a", true), "b", true))).toEqual(["a", "b"]);
+  });
+
+  it("counts a tick as information, so the day is not blank", () => {
+    expect(isBlank(withWorkout(EMPTY_ENTRY, id, true))).toBe(false);
+    expect(isBlank(withWorkout(withWorkout(EMPTY_ENTRY, id, true), id, false))).toBe(true);
+  });
+
+  it("keeps the ticks when a flag, the note or the weight changes", () => {
+    // The withFlag trap again: every with* helper must spread the entry.
+    const done = withWorkout({ flags: {}, note: "", weight: 16.2 }, id, true);
+    expect(withFlag(done, "nagging", true).workouts).toEqual({ [id]: true });
+    expect(withNote(done, "kveldstur").workouts).toEqual({ [id]: true });
+    expect(withWeight(done, 17).workouts).toEqual({ [id]: true });
+    expect(withWeight(done, null).workouts).toEqual({ [id]: true });
+  });
+
+  it("keeps flags, the note and the weight when a tick changes", () => {
+    const day = { flags: { gnikking: true }, note: "notat", weight: 16.2 };
+    expect(withWorkout(day, id, true)).toEqual({ ...day, workouts: { [id]: true } });
+    expect(withWorkout(withWorkout(day, id, true), id, false)).toEqual(day);
   });
 });

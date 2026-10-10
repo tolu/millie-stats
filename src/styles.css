@@ -1632,3 +1632,38 @@ main {
   min-block-size: 1.5rem;
   padding-block: 0.5rem;
 }
+
+/* ---------- footer ---------- */
+
+.footer {
+  display: grid;
+  gap: 0.3rem;
+  border-block-start: 2px solid var(--line);
+  padding-block-start: 0.7rem;
+  font-size: 0.7rem;
+  color: var(--ink-faint);
+
+  & p {
+    margin: 0;
+  }
+
+  & a {
+    color: var(--ink-dim);
+    text-decoration: none;
+
+    &:hover {
+      color: var(--blue-light);
+    }
+
+    &:focus-visible {
+      outline: 2px solid var(--blue-light);
+      outline-offset: 2px;
+      border-radius: 2px;
+    }
+  }
+}
+
+/* A sha is a number you compare against another sha. */
+.footer-build {
+  font-variant-numeric: tabular-nums;
+}

@@ -1,6 +1,7 @@
 import { createMemo, createSignal, Errored, Match, onSettled, Switch } from "solid-js";
 import "./styles.css";
 import Day from "./Day";
+import Footer from "./Footer";
 import Journal from "./Journal";
 import Login from "./Login";
 import { osloDay } from "./lib/date";
@@ -110,6 +111,8 @@ function SignedIn() {
           />
         </Match>
       </Switch>
+      {/* Outside the <Switch>, so it is the same footer on both pages. */}
+      <Footer />
     </div>
   );
 }

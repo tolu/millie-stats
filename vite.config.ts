@@ -1,3 +1,4 @@
+import { execSync } from "node:child_process";
 import { defineConfig, type Plugin } from "vite";
 import solid from "@solidjs/vite-plugin";
 import { cloudflare } from "@cloudflare/vite-plugin";
@@ -28,7 +29,34 @@ function buildClientFirst(): Plugin {
   };
 }
 
+/**
+ * What the footer shows, so "is my fix live?" is answerable from the phone.
+ *
+ * The dirty marker matters: a build from an uncommitted worktree carries a sha
+ * that does not describe what is running, and a build stamp you cannot trust
+ * is worse than none. Falls back gracefully — a tarball with no .git still
+ * builds, and the date alone still tells you whether a deploy landed.
+ */
+function buildStamp(): { sha: string; builtAt: string } {
+  const git = (command: string): string =>
+    execSync(command, { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] }).trim();
+  let sha = "ukjent";
+  try {
+    sha = git("git rev-parse --short HEAD");
+    if (git("git status --porcelain") !== "") sha += "-dirty";
+  } catch {
+    // Not a git checkout. Leave the fallback.
+  }
+  return { sha, builtAt: new Date().toISOString() };
+}
+
+const stamp = buildStamp();
+
 export default defineConfig({
+  define: {
+    __BUILD_SHA__: JSON.stringify(stamp.sha),
+    __BUILT_AT__: JSON.stringify(stamp.builtAt),
+  },
   plugins: [
     buildClientFirst(),
     // The Cloudflare plugin adopts Solid's `ssr` environment, so server

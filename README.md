@@ -7,6 +7,28 @@ ticked off against a weekly target, a journal of everything written down,
 
 Live at **https://millie-stats.tolu.workers.dev**
 
+## Where things live
+
+Everything below is behind a Cloudflare login, so these links are safe to keep
+here even though this repository is public. They carry the account id, which is
+an identifier rather than a credential — useless without an API token, and the
+D1 `database_id` has been in `wrangler.jsonc` since the first commit.
+
+| | |
+|---|---|
+| Worker metrics and deploys | [millie-stats](https://dash.cloudflare.com/25b5c1e5fa76ec2926c5e103e9662f5d/workers/services/view/millie-stats/production/metrics) |
+| Logs, errors, invocations | [Workers Observability](https://dash.cloudflare.com/25b5c1e5fa76ec2926c5e103e9662f5d/workers/services/view/millie-stats/production/observability/events) |
+| The journal itself | [D1 · millie](https://dash.cloudflare.com/25b5c1e5fa76ec2926c5e103e9662f5d/workers/d1/databases/d6f1686c-afce-49c9-8faf-e693579de54f/metrics) |
+| Photo bytes | [R2 · millie-photos](https://dash.cloudflare.com/25b5c1e5fa76ec2926c5e103e9662f5d/r2/default/buckets/millie-photos) |
+
+The same links are in the app's footer, under the build stamp.
+
+Workers Observability is already on (`observability.enabled` in
+`wrangler.jsonc`) and is server-side, so nothing is added to the page. There is
+deliberately no analytics beacon: Cloudflare Web Analytics would have added a
+third-party script a third the size of the whole app, and the only thing it
+measures that Workers Observability does not is Core Web Vitals.
+
 ## Why it exists
 
 Millie is watched for four recurring symptoms, one of them possibly nerve pain

@@ -66,117 +66,105 @@ enters it.
 - **`Day` reads `props.day`; it must never copy it into a signal.** `<Match>`
   keeps the component mounted while the day changes, so a copy taken at mount
   goes stale.
-- **`Day` flushes its pending note on disposal, not just on navigation.** Until
-  a second page existed the debounce always got to fire, so clearing the timer
-  was harmless. Now, typing and immediately leaving discards the write with no
-  request, no error and no trace. Verified by hand: with the flush removed and
-  disposal landing 5ms after a keystroke, the note is simply gone.
+- **`Day` flushes its pending note on disposal, not just on navigation.**
+  Typing and immediately leaving otherwise discards the write with no request,
+  no error and no trace.
 - **The page swap is not wrapped in `startViewTransition`.** It would capture
   the incoming page's empty state and crossfade into "laster…". Keep the
   transition where it is, around day-to-day changes.
 
 ## Invariants — breaking these corrupts the record silently
 
+### The record
+
 - **An unlogged day is `null`, never `0`.** A missing row means nobody filled
   the day in; a row with all-false flags means a logged day where nothing
   happened. Charts, rolling averages and the AI prompt all depend on the
   difference. Averaging gaps as zeros flatters every trend.
+- **"Logged" means exactly one thing everywhere: a row in `days`.** A weight
+  marks its day logged because it lives in `days.data` and cannot do otherwise.
+  A photo marks it through `ensureDay` — `ON CONFLICT DO NOTHING`, never
+  `saveDay`, whose `DO UPDATE SET data = ?2` would wipe a day that already has
+  ticks and a note. `DO NOTHING` also makes the ordering against a concurrent
+  queued save irrelevant in both directions.
 - **Symptom `id`s are written into stored JSON and can never change** without a
   data migration (see `migrations/0002` for the pattern). Adding or removing a
   symptom is one line in `src/symptoms.ts` and needs no migration.
 - **`with*` helpers in `entry.ts` must spread the entry**, never rebuild it from
   named fields. `withFlag` used to `return { flags, note: entry.note }`, so the
   moment `weight` joined `DayEntry`, ticking a checkbox silently erased that
-  day's weight. Any new optional field would have hit the same trap.
+  day's weight. Any new optional field would hit the same trap.
+- **Saves are queued, never parallel.** Each write carries the whole day, so
+  last-write-wins is only safe when "last" means last-issued.
+- **Photos never go in `days.data`.** A photo in that payload would race the
+  note debounce — the same class of bug `writeQueue` exists to prevent. They
+  live in their own table, keyed by day.
 - **Weight interpolates; symptoms never do.** An unlogged symptom day is
   genuinely unknown, so `trends.ts` breaks the line across a gap. A day nobody
   weighed her still had a weight, so `weight.ts` interpolates between
-  measurements — but the chart marks the measured days with dots, and the line
-  itself is dashed throughout because most of it is inferred. Beyond the first
-  and last measurement it extends flat: continuing the slope would invent
-  weight loss that was never observed.
-- **`BASELINE_KG` is a reference line, never a data point.** Seeding the series
-  at 16 before the first measurement would draw a fake ramp up to whatever she
-  actually weighed. With no measurements at all the chart says so rather than
-  drawing a flat 16 kg line that looks like data.
-- **A weight marks its day as logged**, like a photo — unavoidably, since it
-  lives in `days.data`. That is the accepted cost of one rule: "logged" means a
-  row in `days`, everywhere.
-- **Saves are queued, never parallel.** Each write carries the whole day, so
-  last-write-wins is only safe when "last" means last-issued.
-- **The client environment must build before the server bundle**
-  (`buildClientFirst` in `vite.config.ts`). The server bakes the client manifest
-  into the prerendered shell; wrong order ships an `index.html` pointing at a
-  stale hash and production is a blank page with no error.
-- **Auth is enforced once, in `src/worker.ts`**, not per server function. Keep
-  it that way — one gate fails closed, scattered checks fail open. The gate
-  covers the whole `/_photo` prefix, image URLs included: an `<img src>` is a
-  request like any other, and a public bucket would quietly undo the login.
-- **A photo marks its day as logged via `ensureDay`**, which is
-  `ON CONFLICT DO NOTHING` and never `saveDay`. `saveDay`'s `DO UPDATE SET
-  data = ?2` would wipe a day that already has ticks and a note. `DO NOTHING`
-  also makes the ordering against a concurrent queued save irrelevant in both
-  directions. "Logged" still means exactly one thing everywhere: a row in
-  `days`.
+  measurements. Beyond the first and last it extends flat: continuing the slope
+  would invent weight loss that was never observed.
+- **`BASELINE_KG` is a reference line, never a data point.** With no
+  measurements the chart says so rather than drawing a flat 16 kg line that
+  looks like data.
 - **Workout ticks live in `days.data` as a true-only map keyed by workout id;
   the definitions live in the `workouts` table.** A tick follows the `weight`
   pattern in `entry.ts` (spread, key absent when empty) and saves through the
   same queue as a checkbox. Definitions are rows because the user edits them;
   never delete one — its id is in the days that ticked it — set `end_day`
-  instead. `0004_workouts` only adds a table: migrate first, then deploy.
-- **A workout has two states, not three.** An unlogged day is a missed
-  session, not unknown: the weekly target is a count. A week entirely outside
-  the workout's start and end is `null` (not counted) and drawn blank.
-- **Nothing read inside `Day`'s `<main>` may be a suspending memo keyed on
-  `dataVersion`.** The whole of `<main>` sits in one `<Loading>`, so a memo
-  that re-suspends after every save blanks the page. `Workouts.tsx` keys its
-  fetches on the day and applies edits through an overlay signal, the way
-  `Photos.tsx` does; only `Trends`, which has its own `<Loading>`, refetches
-  on `version`.
-- **Photos never go in `days.data`.** Every save carries the whole day, so a
-  photo in that payload would race the note debounce — the same class of bug
-  `writeQueue` exists to prevent. They live in their own table, keyed by day.
+  instead.
+- **A workout has two states, not three.** An unlogged day is a missed session,
+  not unknown: the weekly target is a count. A week entirely outside the
+  workout's start and end is `null` and drawn blank.
+
+### Rendering and reactivity
+
+- **A suspending memo blanks everything inside its `<Loading>`.** The whole of
+  `Day`'s `<main>` sits in one, so nothing read there may be a memo keyed on
+  `dataVersion`. `Workouts.tsx` and `Photos.tsx` key their fetches on the day
+  and apply edits through an overlay signal; only `Trends`, which has its own
+  `<Loading>`, refetches on `version`.
+- **The journal's list is fetched imperatively**, for the same reason: a memo
+  reading the cursor returns a new promise per page and blanks the accumulated
+  list on each "load more". Its paging guards are plain variables, not signals,
+  because they are read back in the tick they are written — the same rule as
+  `edit`'s setter callback.
+- **Infinite scroll measures the sentinel, it does not trust the observer's
+  flag.** `IntersectionObserver` reports asynchronously, so straight after a
+  page is appended the flag still says "visible" though the new rows have
+  pushed the sentinel off screen. Trusting it loaded three pages before the
+  list had been scrolled once.
+- **Each symptom's hue is an SVG presentation attribute** (`--sym-*` in
+  styles.css, reached through `src/symptoms.ts`), so no CSS rule may set
+  `stroke` or `fill` for those marks — a rule outranks the attribute and
+  silently repaints every chart one colour.
+- **The journal's marks have two states, not three.** Every journal row has a
+  note, so it is a logged day by construction. Listing days without notes would
+  bring the third state back.
+
+### Boundaries
+
+- **Auth is enforced once, in `src/worker.ts`**, not per server function — one
+  gate fails closed, scattered checks fail open. It covers the whole `/_photo`
+  prefix, image URLs included: an `<img src>` is a request like any other, and
+  a public bucket would quietly undo the login.
 - **Image bytes never go through a server function.** Arguments are serialised,
   so it would mean base64 and a 33% penalty on the slowest leg. `/_photo` is a
   plain worker route; only the photo *list* is a server function.
-- **The journal's list is fetched imperatively, never through a suspending
-  memo.** A memo that read the cursor would return a new promise per page and
-  every downstream read would suspend, blanking the whole accumulated list on
-  each "load more" — the trap `Photos.tsx` documents. Its paging guards are
-  plain variables rather than signals for the same reason `edit` uses the
-  setter callback: they are read back in the tick they are written.
-- **Infinite scroll measures the sentinel, it does not trust the observer's
-  flag.** `IntersectionObserver` reports asynchronously, so straight after a
-  page is appended the flag still says "visible" even though the new rows have
-  pushed the sentinel off screen. Trusting it loaded three pages before the
-  list had been scrolled once.
-- **Each symptom has its own hue** (`--sym-*` in styles.css, referenced through
-  `src/symptoms.ts`). Four shades of one blue were indistinguishable; four
-  distinct hues are not. The colour is a presentation attribute on the SVG, so
-  no CSS rule may set `stroke`/`fill` for those marks — a rule outranks the
-  attribute and silently repaints every chart the same colour.
-- **The journal's marks have two states, not three.** Trends' third state is
-  "nobody logged this day", and every journal row has a note, so it is a logged
-  day by construction. Listing days without notes would bring the third state
-  back.
+- **Photo storage functions take their bindings as parameters** rather than
+  reaching for `import("cloudflare:workers")`. `src/worker.ts` is imported in
+  *Node* to prerender the shell, so nothing on that path may touch the
+  `cloudflare:` scheme.
 - **Expected server-function failures are returned, not thrown.** Solid does
   not propagate error messages to the client, so a throw reaches the UI as
   "Internal Server Error". Return `{ ok: false, message }` for anything the
   user can act on; let genuine faults throw.
-
-Photo storage functions take their bindings as parameters rather than reaching
-for `import("cloudflare:workers")`. `src/worker.ts` is imported in *Node* to
-prerender the shell, so nothing on that path may touch the `cloudflare:` scheme.
 
 ## Types
 
 `@cloudflare/workers-types` is a devDependency and supplies `D1Database` and
 `cloudflare:workers`. There is no generated `worker-configuration.d.ts` to
 maintain, and a fresh clone typechecks after `npm install` alone.
-
-`wrangler types` still works if you ever need the generated `Env` interface for
-bindings — but the app declares its own `Env` in `src/worker.ts`, so you
-probably do not.
 
 `erasableSyntaxOnly` is on: no enums, no namespaces with runtime output, no
 parameter properties. Node 24 strips types natively and nothing may depend on a
@@ -189,9 +177,8 @@ tokens, the prompt.
 No component tests.
 
 **Every bug fix gets a test, and the test must be verified to fail without the
-fix.** That discipline is what found the `?d=2026-02-31` hole and disproved a
-DST claim the plan asserted confidently and wrongly. A test that never fails
-catches nothing.
+fix.** That discipline is what found the `?d=2026-02-31` hole. A test that
+never fails catches nothing.
 
 The prompt is snapshot-tested on purpose: changing what the model is told
 should show up as a reviewable diff.
@@ -201,10 +188,18 @@ should show up as a reviewable diff.
 - Local D1 is empty by default. `node scripts/seed-dev.mjs 2026-08-26 > /tmp/s.sql`
   then `npx wrangler d1 execute millie --local --file /tmp/s.sql` for 120 days
   of fake data with gaps and a trend.
+- **The client environment must build before the server bundle**
+  (`buildClientFirst` in `vite.config.ts`). The server bakes the client
+  manifest into the prerendered shell; wrong order ships an `index.html`
+  pointing at a stale hash, and production is a blank page with no error.
+- **Build after committing, never before.** The footer's build stamp is read at
+  build time, so a build from a dirty tree deploys a sha that does not describe
+  what is running. The `-dirty` marker is the only hint, and only if you look.
 - **Deploy before migrating** when a migration renames something the old code
-  reads, and dry-run data migrations locally first. `0003_photos` is the
-  opposite case — it only adds a table, and the new code needs it — so migrate
-  first, then deploy. The R2 bucket must exist before either.
+  reads, and dry-run data migrations locally first. A purely additive
+  migration is the opposite case — the new code needs the table, so migrate
+  first, then deploy. That covers `0003_photos` and `0004_workouts`, and any
+  migration that only adds. The R2 bucket must exist before either.
 - Testing summaries locally needs a real `ANTHROPIC_API_KEY` line in
   `.dev.vars`. Never ask the user to paste a key into the conversation.
 - The built config keeps its own local D1 under `dist/`, so `rm -rf dist`
@@ -217,9 +212,8 @@ should show up as a reviewable diff.
 
 - **Do not use git worktrees in this project.** Work in the checkout directly.
   No `--worktree`, no `EnterWorktree`, and no `isolation: "worktree"` on
-  subagents. `.claude/settings.json` sets `worktree.bgIsolation: "none"` so
-  background sessions are not forced into one either — the setting only covers
-  that case, so the rest is on you to respect.
+  subagents. `.claude/settings.json` covers background sessions; the rest is on
+  you.
 - **Never commit or push without explicit consent for that specific change.**
   Staging is fine. One approval does not carry to the next commit.
 - Never amend, force-push, rebase or reset. Merge to integrate.

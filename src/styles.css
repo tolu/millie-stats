@@ -86,6 +86,19 @@ main {
   gap: 1rem;
 }
 
+main,
+.trends {
+  transition: opacity 0.15s;
+}
+
+/* What is on screen is being replaced. Delayed, so a swap that lands quickly
+   never dims at all. */
+main[aria-busy="true"],
+.trends[aria-busy="true"] {
+  opacity: 0.45;
+  transition-delay: 0.2s;
+}
+
 .shell {
   max-width: 34rem;
   margin-inline: auto;

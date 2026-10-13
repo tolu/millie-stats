@@ -1,4 +1,4 @@
-import { createMemo, createSignal, For, Loading, Show } from "solid-js";
+import { createMemo, createSignal, For, isPending, Loading, Show } from "solid-js";
 import { SYMPTOMS } from "./symptoms";
 import { addDays, formatShort, lastNDays, rangeDays, startOfWeek } from "./lib/date";
 import type { DayEntry } from "./lib/entry";
@@ -68,7 +68,14 @@ export default function Trends(props: Props) {
   const cover = createMemo(() => coverage(days(), entries()));
 
   return (
-    <section class="trends" aria-labelledby="trends-heading">
+    // Busy while a refetch is in flight. The old charts stay up until the new
+    // numbers land, so without a cue a save or a change of window looks like
+    // it did nothing.
+    <section
+      class="trends"
+      aria-labelledby="trends-heading"
+      aria-busy={isPending(data) ? "true" : "false"}
+    >
       <div class="trends-head">
         <h2 id="trends-heading">Siste {span()} dager</h2>
         <div class="window-toggle" role="group" aria-label="Lengde på perioden">

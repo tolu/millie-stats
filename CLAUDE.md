@@ -36,7 +36,7 @@ you have seen. These all cost real debugging time already:
 | Habit | Reality in Solid 2 |
 |---|---|
 | `createResource` | Gone. A `createMemo` returning a promise suspends downstream. |
-| `createEffect(fn)` | Needs **two** args: `createEffect(compute, effect)`. One arg throws and halts the whole reactive system — the page renders once, then nothing responds. |
+| `createEffect(fn)` | Needs **two** args: `createEffect(compute, effect)`. One arg is a type error since rc.6, so `tsc` catches it before the page does. |
 | `<Suspense>` / `<ErrorBoundary>` | `<Loading>` / `<Errored>` |
 | `classList={{ a: cond }}` | Removed. Compute the class string. |
 | `aria-expanded={bool}` | Must be a string: `cond ? "true" : "false"` |
@@ -133,10 +133,16 @@ enters it.
   for; `<main>` goes `inert` while a day arrives, because a tick made under
   the new label would be saved to the old day. In dev, `SILENT_HOLD` and
   `LONG_HOLD` in the console name a wait nothing on screen admits to.
-- **`flush()` between a write that must show now and one that starts a
-  fetch.** Otherwise the first is held with the second. The same goes before
-  calling an `action`: a write made in the tick an action starts is adopted by
-  it and shows only when it ends.
+- **A write that starts a fetch gets a batch of its own.** Anything written
+  in the same tick is held with it, before or after. `chartsStale` in
+  `Day.tsx` is the one place the charts are told to refetch, and it defers
+  and flushes first for that reason; bump the counter anywhere else and
+  "lagret", or the upload button, waits for the trends again. The same goes
+  before calling an `action`: a write made in the tick it starts is adopted
+  by it and shows only when it ends, so `flush()` first.
+- **Lists are the server's; after a change they are read again.**
+  `Workouts.tsx` and `Summaries.tsx` call `refresh()` on their memo rather
+  than patching a local copy.
 - **Inside an `action`, only the optimistic setter shows at once.** Any other
   write is held until the action ends, so errors are reported by the caller.
   `Photos.tsx` is the one place this is used: the list is an optimistic store

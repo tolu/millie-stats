@@ -1,4 +1,4 @@
-import { createMemo, createSignal, flush, For, Show, untrack } from "solid-js";
+import { createMemo, createSignal, flush, For, refresh, Show } from "solid-js";
 import { addDays, formatLong, formatShort, formatWeekday, rangeDays, startOfWeek } from "./lib/date";
 import { isWorkoutDone } from "./lib/entry";
 import type { DayEntry } from "./lib/entry";
@@ -24,12 +24,10 @@ export default function Workouts(props: {
   /** A definition was created, edited or retired. */
   onChanged: () => void;
 }) {
-  // Suspends once, at mount, alongside the day itself. Edits go through the
-  // overlay below rather than a refetch: a re-suspending memo would blank the
-  // whole page, since <main> sits in one <Loading>.
-  const stored = createMemo(async () => await listWorkouts());
-  const [edited, setEdited] = createSignal<Workout[] | null>(null);
-  const workouts = createMemo((): Workout[] => edited() ?? stored());
+  // Suspends once, at mount, alongside the day itself. After an edit the list
+  // is read again rather than patched here: the dialog is already waiting on
+  // the server, and a second copy of the list is one more thing to keep right.
+  const workouts = createMemo(async () => await listWorkouts());
 
   const active = createMemo(() => workouts().filter((w) => isActiveOn(w, props.day)));
 
@@ -78,14 +76,10 @@ export default function Workouts(props: {
     nameField.focus();
   }
 
-  function upsert(workout: Workout) {
-    // The base comes from the current list, never from a value captured when
-    // the dialog opened: signal writes are batched.
-    const current = untrack(workouts);
-    const next = current.some((w) => w.id === workout.id)
-      ? current.map((w) => (w.id === workout.id ? workout : w))
-      : [...current, workout];
-    setEdited(next);
+  /** A definition changed on the server. Awaited, so the dialog closes over
+   *  a list that already shows it. */
+  async function changed() {
+    await refresh(workouts);
     props.onChanged();
   }
 
@@ -105,7 +99,7 @@ export default function Workouts(props: {
         setError(reply.message);
         return;
       }
-      upsert(reply.workout);
+      await changed();
       dialog.close();
     } catch {
       setError("Kunne ikke lagre øvelsen");
@@ -129,7 +123,7 @@ export default function Workouts(props: {
         setError(reply.message);
         return;
       }
-      upsert(reply.workout);
+      await changed();
       dialog.close();
     } catch {
       setError("Kunne ikke avslutte øvelsen");

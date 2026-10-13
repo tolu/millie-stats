@@ -1,7 +1,6 @@
-import { createMemo, createSignal, For, Loading, Show } from "solid-js";
+import { createMemo, createSignal, For, Loading, refresh, Show } from "solid-js";
 import { addDays, formatShort } from "./lib/date";
 import { listSummaries } from "./server/db";
-import type { SummaryRecord } from "./server/db";
 import { summarise } from "./server/summarise";
 
 const RANGES = [
@@ -14,17 +13,9 @@ export default function Summaries(props: { endDay: string }) {
   const [range, setRange] = createSignal<(typeof RANGES)[number]>(RANGES[1]);
   const [busy, setBusy] = createSignal(false);
   const [error, setError] = createSignal("");
-  const [fresh, setFresh] = createSignal<SummaryRecord[]>([]);
   const [open, setOpen] = createSignal<string | null>(null);
 
-  const stored = createMemo(async () => await listSummaries(20));
-
-  // Newly generated summaries are prepended locally rather than refetching:
-  // the server already returned the full record.
-  const all = createMemo(() => {
-    const seen = new Set(fresh().map((s) => s.id));
-    return [...fresh(), ...stored().filter((s) => !seen.has(s.id))];
-  });
+  const all = createMemo(async () => await listSummaries(20));
 
   const from = createMemo(() => addDays(props.endDay, -(range().days - 1)));
 
@@ -38,7 +29,9 @@ export default function Summaries(props: { endDay: string }) {
         setError(result.message);
         return;
       }
-      setFresh((current) => [result.summary, ...current]);
+      // Read again rather than prepended here. One request after a call that
+      // took seconds, and the list is never anything but the server's.
+      await refresh(all);
       setOpen(result.summary.id);
     } catch (cause) {
       // Only genuine faults land here; expected failures come back as data.

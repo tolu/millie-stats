@@ -1,4 +1,14 @@
-import { createMemo, createSignal, For, Loading, onSettled, untrack } from "solid-js";
+import {
+  createMemo,
+  createSignal,
+  flush,
+  For,
+  isPending,
+  latest,
+  Loading,
+  onSettled,
+  untrack,
+} from "solid-js";
 import { SYMPTOMS } from "./symptoms";
 import { addDays, formatLong } from "./lib/date";
 import { EMPTY_ENTRY, isFlagged, withFlag, withNote, withWeight, withWorkout } from "./lib/entry";
@@ -26,6 +36,14 @@ export default function Day(props: {
 }) {
   const today = () => props.today;
   const day = () => props.day;
+  // A change of day is held until the new day's data has arrived: `day()`
+  // keeps answering the day still on screen, so the page never shows one
+  // day's label over another day's ticks. `latest` is where that change is
+  // heading. The nav reads it so a tap answers at once, and so a second tap
+  // counts from the day asked for rather than the one still showing — on a
+  // slow connection two quick taps on ‹ otherwise move one day, not two.
+  const target = () => latest(day);
+  const arriving = () => isPending(day);
   const [status, setStatus] = createSignal<WriteState>("idle");
   const [error, setError] = createSignal("");
   // Bumped on every successful save so the charts below reflect the edit that
@@ -46,6 +64,22 @@ export default function Day(props: {
     if (local && local.day === day()) return local.entry;
     return stored()?.entry ?? EMPTY_ENTRY;
   });
+
+  /**
+   * Tells the charts to refetch, in a batch of its own.
+   *
+   * Writes in one batch land together, and a batch that starts a fetch lands
+   * when the fetch does. Bumped inline, the counter took whatever was written
+   * in the same tick with it: "lagret" waited for the trends, and so did the
+   * upload button coming back. Deferred, so writes the caller makes after
+   * this call are committed first too.
+   */
+  function chartsStale() {
+    queueMicrotask(() => {
+      flush();
+      setDataVersion((n) => n + 1);
+    });
+  }
 
   /** Flushes whatever is pending for the day being left. */
   function flushPending() {
@@ -95,7 +129,7 @@ export default function Day(props: {
     (state, message) => {
       setStatus(state);
       setError(message ?? "");
-      if (state === "saved") setDataVersion((n) => n + 1);
+      if (state === "saved") chartsStale();
     },
   );
 
@@ -174,26 +208,26 @@ export default function Day(props: {
         <button
           type="button"
           class="chevron"
-          onClick={() => goTo(addDays(day(), -1))}
+          onClick={() => goTo(addDays(target(), -1))}
           aria-label="Forrige dag"
         >
           ‹
         </button>
 
         <button type="button" class="current" onClick={() => picker.showPicker()}>
-          {formatLong(day())}
+          {formatLong(target())}
         </button>
         <input
           ref={picker}
           type="date"
-          value={day()}
+          value={target()}
           max={today()}
           tabindex="-1"
           aria-hidden="true"
           onChange={(e) => e.currentTarget.value && goTo(e.currentTarget.value)}
         />
 
-        {day() === today() ? (
+        {target() === today() ? (
           <button
             type="button"
             class="chevron"
@@ -207,7 +241,7 @@ export default function Day(props: {
             <button
               type="button"
               class="chevron"
-              onClick={() => goTo(addDays(day(), 1))}
+              onClick={() => goTo(addDays(target(), 1))}
               aria-label="Neste dag"
             >
               ›
@@ -220,7 +254,9 @@ export default function Day(props: {
       </nav>
 
       <Loading fallback={<p class="status">laster…</p>}>
-        <main>
+        {/* Inert while a day is arriving: the label already names the new day,
+            and a tick made now would be saved to the one still showing. */}
+        <main inert={arriving()} aria-busy={arriving() ? "true" : "false"}>
           <fieldset class="symptoms">
             <legend>Kryss av for dagen</legend>
             <For each={SYMPTOMS}>
@@ -266,7 +302,7 @@ export default function Day(props: {
             entry={entry()}
             onToggle={toggleWorkout}
             // A definition changed, so the weekly bars below are stale.
-            onChanged={() => setDataVersion((n) => n + 1)}
+            onChanged={chartsStale}
           />
 
           <label class="note">
@@ -286,7 +322,7 @@ export default function Day(props: {
           <Photos
             day={day()}
             // A photo makes the day logged, so the charts below are stale.
-            onChange={() => setDataVersion((n) => n + 1)}
+            onChange={chartsStale}
             // What replaces requiring a note: a photo is almost always worth a
             // sentence, so the cursor goes there rather than a field being
             // made mandatory. Nothing else in this app blocks on input.

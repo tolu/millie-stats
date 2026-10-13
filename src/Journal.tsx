@@ -54,10 +54,9 @@ export default function Journal(props: {
     setBusy(true);
     setError("");
     try {
-      // No suspending memo anywhere in this page. A memo that read the cursor
-      // would return a new promise per page, and every downstream read would
-      // suspend — blanking the whole accumulated list behind a fallback on
-      // each "load more". Photos.tsx documents the same trap.
+      // Fetched by hand rather than through a memo: a memo reading the cursor
+      // would hold one page, not the list so far, so the accumulation needs
+      // its own state either way.
       const page =
         cursor === undefined ? await listNotes(PAGE) : await listNotes(PAGE, cursor);
       // Callback form: appending must build on the latest array, never on one

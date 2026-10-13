@@ -1,4 +1,14 @@
-import { createMemo, createSignal, For, Loading, Show, untrack } from "solid-js";
+import {
+  action,
+  createMemo,
+  createOptimisticStore,
+  createSignal,
+  flush,
+  For,
+  Loading,
+  refresh,
+  Show,
+} from "solid-js";
 import { formatLong } from "./lib/date";
 import { isAcceptableImage, prepare } from "./lib/image";
 import { MAX_PHOTOS_PER_DAY, MAX_UPLOAD_BYTES, photoUrl } from "./lib/photo";
@@ -42,34 +52,14 @@ export default function Photos(props: {
   const [shown, setShown] = createSignal<PhotoRecord | null>(null);
   const [confirming, setConfirming] = createSignal(false);
 
-  const stored = createMemo(async () => await photosForDay(props.day));
-
-  // An optimistic overlay over the fetched list, tagged with its day so
-  // switching days never shows another day's photos. Re-reading the list from
-  // the server after every change would be simpler, but a re-suspending memo
-  // blanks the grid on each upload.
-  const [local, setLocal] = createSignal<{ day: string; photos: PhotoRecord[] } | null>(null);
-
-  const photos = createMemo((): PhotoRecord[] => {
-    const overlay = local();
-    if (overlay && overlay.day === props.day) return overlay.photos;
-    return stored() ?? [];
-  });
-
-  /**
-   * The base comes from the setter callback, never from reading `photos()`
-   * back: signal writes are batched, so two uploads settling in one tick would
-   * both build on the same list and the second would drop the first. Same rule
-   * as `edit` in App.tsx, for the same reason.
-   */
-  function replace(change: (current: PhotoRecord[]) => PhotoRecord[]) {
-    const day = props.day;
-    setLocal((previous) => {
-      const base =
-        previous && previous.day === day ? previous.photos : (untrack(stored) ?? []);
-      return { day, photos: change(base) };
-    });
-  }
+  // The server's list, with an optimistic layer on top. A write through
+  // `setPhotos` shows at once but belongs to the action that made it, and is
+  // dropped when that action ends — by then `refresh` has re-read the list, so
+  // what remains is what the server holds. Nothing here keeps a second copy.
+  const [photos, setPhotos] = createOptimisticStore<PhotoRecord[]>(
+    () => photosForDay(props.day),
+    [],
+  );
 
   let picker!: HTMLInputElement;
   let viewer!: HTMLDialogElement;
@@ -84,7 +74,7 @@ export default function Photos(props: {
     let uploaded = 0;
     try {
       for (const file of files) {
-        if (untrack(photos).length >= MAX_PHOTOS_PER_DAY) {
+        if (photos.length >= MAX_PHOTOS_PER_DAY) {
           // Says what happened to the rest of the batch. The cap itself is
           // already stated below the grid, so repeating it here read as two
           // separate complaints about one thing.
@@ -95,8 +85,10 @@ export default function Photos(props: {
           setError("Bare bilder kan lastes opp");
           continue;
         }
-        const record = await send(props.day, await prepare(file, MAX_UPLOAD_BYTES));
-        replace((current) => [...current, record]);
+        await send(props.day, await prepare(file, MAX_UPLOAD_BYTES));
+        // Not optimistic: a thumbnail has no URL until the server has stored
+        // it. Awaited, so the cap check above counts this photo next time.
+        await refresh(photos);
         uploaded++;
         props.onChange();
       }
@@ -110,15 +102,25 @@ export default function Photos(props: {
     }
   }
 
+  // The photo leaves the grid on the tap rather than after the round trip. If
+  // the delete fails the layer is dropped with the action and it comes back.
+  const discard = action(function* (day: string, id: string) {
+    setPhotos((list) => list.filter((p) => p.id !== id));
+    const response: Response = yield fetch(photoUrl(day, id, "full"), { method: "DELETE" });
+    if (!response.ok) throw new Error("Kunne ikke slette bildet");
+    yield refresh(photos);
+  });
+
+  // The error is written out here, not inside the action: a write made there
+  // is held with the action and would only show once it had already ended.
   async function remove(photo: PhotoRecord) {
     setError("");
+    // Committed before the action starts. A write made in the same tick as an
+    // action is adopted by it, and an old error would stay up until it ended.
+    flush();
+    viewer.close();
     try {
-      const response = await fetch(photoUrl(props.day, photo.id, "full"), {
-        method: "DELETE",
-      });
-      if (!response.ok) throw new Error("Kunne ikke slette bildet");
-      replace((current) => current.filter((p) => p.id !== photo.id));
-      viewer.close();
+      await discard(props.day, photo.id);
       props.onChange();
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : String(cause));
@@ -140,16 +142,16 @@ export default function Photos(props: {
     return photo ? photoUrl(props.day, photo.id, "full") : "";
   });
 
-  const full = createMemo(() => photos().length >= MAX_PHOTOS_PER_DAY);
+  const full = createMemo(() => photos.length >= MAX_PHOTOS_PER_DAY);
 
   return (
     <section class="photos" aria-labelledby="photos-heading">
       <h2 id="photos-heading">Bilder</h2>
 
       <Loading fallback={<p class="muted">laster…</p>}>
-        <Show when={photos().length > 0}>
+        <Show when={photos.length > 0}>
           <ul class="photo-grid">
-            <For each={photos()}>
+            <For each={photos}>
               {(photo, index) => (
                 <li>
                   <button type="button" class="thumb" onClick={() => open(photo)}>

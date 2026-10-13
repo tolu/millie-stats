@@ -65,6 +65,22 @@ export default function Day(props: {
     return stored()?.entry ?? EMPTY_ENTRY;
   });
 
+  /**
+   * Tells the charts to refetch, in a batch of its own.
+   *
+   * Writes in one batch land together, and a batch that starts a fetch lands
+   * when the fetch does. Bumped inline, the counter took whatever was written
+   * in the same tick with it: "lagret" waited for the trends, and so did the
+   * upload button coming back. Deferred, so writes the caller makes after
+   * this call are committed first too.
+   */
+  function chartsStale() {
+    queueMicrotask(() => {
+      flush();
+      setDataVersion((n) => n + 1);
+    });
+  }
+
   /** Flushes whatever is pending for the day being left. */
   function flushPending() {
     clearTimeout(noteTimer);
@@ -113,12 +129,7 @@ export default function Day(props: {
     (state, message) => {
       setStatus(state);
       setError(message ?? "");
-      if (state !== "saved") return;
-      // Committed on its own, before the charts are told to refetch. Writes in
-      // one batch land together, and a batch that starts a fetch lands when
-      // the fetch does — so without this "lagret" waited for the trends.
-      flush();
-      setDataVersion((n) => n + 1);
+      if (state === "saved") chartsStale();
     },
   );
 
@@ -291,7 +302,7 @@ export default function Day(props: {
             entry={entry()}
             onToggle={toggleWorkout}
             // A definition changed, so the weekly bars below are stale.
-            onChanged={() => setDataVersion((n) => n + 1)}
+            onChanged={chartsStale}
           />
 
           <label class="note">
@@ -311,7 +322,7 @@ export default function Day(props: {
           <Photos
             day={day()}
             // A photo makes the day logged, so the charts below are stale.
-            onChange={() => setDataVersion((n) => n + 1)}
+            onChange={chartsStale}
             // What replaces requiring a note: a photo is almost always worth a
             // sentence, so the cursor goes there rather than a field being
             // made mandatory. Nothing else in this app blocks on input.

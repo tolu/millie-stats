@@ -119,14 +119,33 @@ enters it.
 
 ### Rendering and reactivity
 
-- **A suspending memo blanks everything inside its `<Loading>`.** The whole of
-  `Day`'s `<main>` sits in one, so nothing read there may be a memo keyed on
-  `dataVersion`. `Workouts.tsx` and `Photos.tsx` key their fetches on the day
-  and apply edits through an overlay signal; only `Trends`, which has its own
-  `<Loading>`, refetches on `version`.
-- **The journal's list is fetched imperatively**, for the same reason: a memo
-  reading the cursor returns a new promise per page and blanks the accumulated
-  list on each "load more". Its paging guards are plain variables, not signals,
+- **A refetch does not bring the `<Loading>` fallback back — it holds.** The
+  fallback shows until the first value and never again. After that, a memo
+  going pending keeps the old content on screen, and every write in the batch
+  that started the fetch stays invisible until the data lands, including
+  writes that have nothing to do with it. Measured on rc.3 and rc.14 with
+  delayed requests: a change of day froze the label for the whole fetch, and
+  "lagret" waited for the trends. This file used to say the opposite, that a
+  refetch blanks the page; nobody had observed that.
+- **So a wait has to be shown on purpose.** `latest(x)` is where a held value
+  is heading, `isPending(x)` is whether one is on the way. The date nav reads
+  `latest` so a tap answers at once and a second tap counts from the day asked
+  for; `<main>` goes `inert` while a day arrives, because a tick made under
+  the new label would be saved to the old day. In dev, `SILENT_HOLD` and
+  `LONG_HOLD` in the console name a wait nothing on screen admits to.
+- **`flush()` between a write that must show now and one that starts a
+  fetch.** Otherwise the first is held with the second. The same goes before
+  calling an `action`: a write made in the tick an action starts is adopted by
+  it and shows only when it ends.
+- **Inside an `action`, only the optimistic setter shows at once.** Any other
+  write is held until the action ends, so errors are reported by the caller.
+  `Photos.tsx` is the one place this is used: the list is an optimistic store
+  over the server's, a delete shows on the tap and comes back if it fails.
+  Day saves stay on `writeQueue` — actions run in parallel and do not order
+  the requests they send.
+- **The journal's list is fetched imperatively.** A memo reading the cursor
+  yields one page, not the list so far, so the accumulation needs its own
+  state either way. Its paging guards are plain variables, not signals,
   because they are read back in the tick they are written — the same rule as
   `edit`'s setter callback.
 - **Infinite scroll measures the sentinel, it does not trust the observer's

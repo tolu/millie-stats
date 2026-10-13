@@ -25,8 +25,7 @@ export default function Workouts(props: {
   onChanged: () => void;
 }) {
   // Suspends once, at mount, alongside the day itself. Edits go through the
-  // overlay below rather than a refetch: a re-suspending memo would blank the
-  // whole page, since <main> sits in one <Loading>.
+  // overlay below, which shows them without a second round trip.
   const stored = createMemo(async () => await listWorkouts());
   const [edited, setEdited] = createSignal<Workout[] | null>(null);
   const workouts = createMemo((): Workout[] => edited() ?? stored());

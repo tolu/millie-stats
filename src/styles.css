@@ -622,21 +622,11 @@ main[aria-busy="true"],
     }
   }
 
-  &[data-phase="recording"] button {
-    color: var(--paper);
-    background: var(--blue-light);
-    border-color: var(--blue-light);
-  }
-
   & output {
     flex: 1;
     min-inline-size: 0;
     font-size: 0.85rem;
-    color: var(--ink-dim);
-
-    &.error {
-      color: var(--danger);
-    }
+    color: var(--danger);
   }
 }
 
@@ -1449,6 +1439,191 @@ main[aria-busy="true"],
     margin: 0;
     font-size: 0.95rem;
     text-wrap: balance;
+  }
+}
+
+/* Dictation is a bottom sheet: where the thumb is, with the page above still
+   visible and visibly out of reach. Builds on .weight-dialog. */
+.dictation {
+  margin: auto auto max(0.75rem, env(safe-area-inset-bottom));
+  inline-size: 100%;
+  max-inline-size: min(100vw - 1.5rem, 30rem);
+  padding: 1.1rem;
+  box-shadow: var(--lift);
+
+  &[open] {
+    gap: 1rem;
+  }
+
+  &::backdrop {
+    background: color-mix(in oklab, var(--paper) 65%, transparent);
+    backdrop-filter: blur(2px) saturate(0.6);
+  }
+
+  & h2 {
+    font-weight: 600;
+    color: var(--ink-dim);
+  }
+
+  & .weight-actions button {
+    flex: 1;
+    justify-content: center;
+  }
+}
+
+/* Newest line at the bottom and kept in view: column-reverse starts the
+   scroll at the end without a line of script. */
+.live {
+  margin: 0;
+  display: flex;
+  flex-direction: column-reverse;
+  min-block-size: 4lh;
+  max-block-size: 40dvh;
+  overflow-y: auto;
+  font-size: 1.2rem;
+  font-weight: 600;
+  line-height: 1.4;
+
+  & .interim {
+    color: var(--ink-faint);
+  }
+}
+
+.dictation .hint {
+  margin: 0;
+  text-align: center;
+  font-size: 0.85rem;
+  color: var(--sym-slow-walk);
+}
+
+/* The orb. Cel-shaded like the rest: an ink outline and a hard shadow, and
+   rings that step outward like drawn frames instead of glowing. It swells
+   with the microphone's level, so a still orb while talking means the mic is
+   not hearing anything. */
+.orb {
+  --level: 0;
+  position: relative;
+  justify-self: center;
+  display: grid;
+  place-items: center;
+  inline-size: 4rem;
+  block-size: 4rem;
+  margin-block: 1rem;
+
+  & .core {
+    position: relative;
+    z-index: 1;
+    box-sizing: border-box;
+    inline-size: 100%;
+    block-size: 100%;
+    padding: 1rem;
+    border-radius: 50%;
+    background: var(--blue);
+    border: 3px solid #000;
+    box-shadow:
+      var(--lift),
+      inset -0.35rem -0.35rem 0 color-mix(in oklab, var(--blue-deep) 70%, var(--blue));
+    fill: none;
+    stroke: var(--paper);
+    stroke-width: 2.6;
+    stroke-linecap: round;
+    scale: calc(1 + var(--level) * 0.22);
+    transition: scale 90ms linear;
+  }
+
+  & .ring {
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    border: 2px solid var(--blue-light);
+    opacity: 0;
+    animation: orb-ring 1.8s steps(6, end) infinite;
+
+    &:nth-child(2) {
+      animation-delay: 0.6s;
+    }
+    &:nth-child(3) {
+      animation-delay: 1.2s;
+    }
+  }
+
+  /* Only while the text is being cleaned: the one moment the AI is working. */
+  & .spark {
+    position: absolute;
+    z-index: 2;
+    inline-size: 1.2rem;
+    block-size: 1.2rem;
+    fill: var(--blue-light);
+    stroke: #000;
+    stroke-width: 1.4;
+    stroke-linejoin: round;
+    display: none;
+    animation: orb-twinkle 1.4s steps(4, end) infinite;
+
+    &:nth-of-type(2) {
+      translate: -2.6rem -1rem;
+    }
+    &:nth-of-type(3) {
+      translate: 2.7rem -1.4rem;
+      animation-delay: 0.45s;
+      inline-size: 0.9rem;
+    }
+    &:nth-of-type(4) {
+      translate: 2.3rem 1.6rem;
+      animation-delay: 0.9s;
+      inline-size: 1rem;
+    }
+  }
+
+  &[data-state="quiet"] {
+    & .ring {
+      animation-duration: 3.6s;
+      border-color: var(--line-strong);
+    }
+    & .core {
+      background: var(--raised-high);
+      box-shadow: var(--lift);
+      stroke: var(--ink-dim);
+    }
+  }
+
+  &[data-state="finishing"] {
+    & .ring {
+      display: none;
+    }
+    & .spark {
+      display: block;
+    }
+  }
+}
+
+@keyframes orb-ring {
+  0% {
+    opacity: 0.9;
+    scale: 1;
+  }
+  100% {
+    opacity: 0;
+    scale: 2.1;
+  }
+}
+
+@keyframes orb-twinkle {
+  0%,
+  100% {
+    scale: 0.4;
+    rotate: 0deg;
+  }
+  50% {
+    scale: 1;
+    rotate: 45deg;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .orb .ring,
+  .orb .spark {
+    animation: none;
   }
 }
 

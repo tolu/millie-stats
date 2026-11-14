@@ -26,7 +26,11 @@ describe("tokens", () => {
   it("rejects a tampered signature", async () => {
     const token = await createToken(SECRET, YEAR);
     const [expiry, signature] = token.split(".");
-    const flipped = (signature ?? "").replace(/.$/, (c) => (c === "A" ? "B" : "A"));
+    // The FIRST character, not the last. A 32-byte HMAC is 43 base64url
+    // characters, and the last one carries two padding bits: A and B decode to
+    // the same bytes there, so flipping it left the signature intact whenever
+    // it ended in A — about one run in sixteen failed.
+    const flipped = (signature ?? "").replace(/^./, (c) => (c === "A" ? "B" : "A"));
     expect(await verifyToken(`${expiry}.${flipped}`, SECRET)).toBe(false);
   });
 

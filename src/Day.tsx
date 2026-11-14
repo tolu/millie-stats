@@ -13,8 +13,10 @@ import { SYMPTOMS } from "./symptoms";
 import { addDays, formatLong } from "./lib/date";
 import { EMPTY_ENTRY, isFlagged, withFlag, withNote, withWeight, withWorkout } from "./lib/entry";
 import type { DayEntry } from "./lib/entry";
+import { appendToNote } from "./lib/transcript";
 import { createWriteQueue } from "./lib/writeQueue";
 import type { WriteState } from "./lib/writeQueue";
+import Dictate from "./Dictate";
 import Masthead from "./Masthead";
 import Photos from "./Photos";
 import Weight from "./Weight";
@@ -89,7 +91,8 @@ export default function Day(props: {
   }
 
   function goTo(next: string) {
-    if (next > today()) return;
+    // The text being dictated belongs to the day on screen.
+    if (next > today() || dictating()) return;
     const move = () => {
       // A pending note save belongs to the day being left, so flush it before
       // the queue is reset - otherwise navigating away loses what was typed.
@@ -107,12 +110,16 @@ export default function Day(props: {
   }
 
   function toJournal() {
+    if (dictating()) return;
     // Leaving the page unmounts this component, so the same flush applies.
     flushPending();
     props.onJournal();
   }
 
-  let noteField!: HTMLTextAreaElement;
+  let micButton: HTMLButtonElement | undefined;
+  // From the press until the text is in. Leaving meanwhile would either write
+  // it to a different day or, on unmount, throw it away.
+  const [dictating, setDictating] = createSignal(false);
 
   let noteTimer: ReturnType<typeof setTimeout> | undefined;
   // Flushes on disposal rather than discarding. Until this page could unmount,
@@ -183,6 +190,14 @@ export default function Day(props: {
     noteTimer = setTimeout(() => queue.push({ day: target, entry: next }), NOTE_DEBOUNCE_MS);
   }
 
+  // Like a tick, a finished dictation is a discrete act: saved at once,
+  // appended on a new line, never over what is already there.
+  function appendDictation(text: string) {
+    const next = edit((current) => withNote(current, appendToNote(current.note, text)));
+    clearTimeout(noteTimer);
+    queue.push({ day: day(), entry: next });
+  }
+
   let picker!: HTMLInputElement;
 
   const statusText = createMemo(() => {
@@ -204,7 +219,7 @@ export default function Day(props: {
         <Weight day={day()} weight={entry().weight} onSave={editWeight} />
       </Masthead>
 
-      <nav class="datenav" aria-label="Velg dag">
+      <nav class="datenav" aria-label="Velg dag" inert={dictating()}>
         <button
           type="button"
           class="chevron"
@@ -308,12 +323,16 @@ export default function Day(props: {
           <label class="note">
             <span>Notat</span>
             <textarea
-              ref={noteField}
               value={entry().note}
               placeholder="Hva skjedde i dag?"
               onInput={(e) => editNote(e.currentTarget.value)}
             />
           </label>
+          <Dictate
+            onText={appendDictation}
+            onBusy={setDictating}
+            buttonRef={(el) => (micButton = el)}
+          />
 
           <output class="status" data-state={status()} aria-live="polite">
             {statusText()}
@@ -324,9 +343,10 @@ export default function Day(props: {
             // A photo makes the day logged, so the charts below are stale.
             onChange={chartsStale}
             // What replaces requiring a note: a photo is almost always worth a
-            // sentence, so the cursor goes there rather than a field being
-            // made mandatory. Nothing else in this app blocks on input.
-            onUploaded={() => noteField.focus()}
+            // sentence, so focus goes to the microphone rather than a field
+            // being made mandatory — one press to talk, and no keyboard
+            // popping up. Nothing else in this app blocks on input.
+            onUploaded={() => micButton?.focus()}
           />
 
           <Trends endDay={today()} version={dataVersion()} />

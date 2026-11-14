@@ -597,6 +597,52 @@ main[aria-busy="true"],
   }
 }
 
+/* ---------- dictation ---------- */
+
+/* Shares .add-photo's button and .photo-actions' row; only what differs is here. */
+.dictate {
+  gap: 0.6rem;
+  margin-block-start: -0.5rem;
+
+  & button {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    /* Held with a thumb, so it is bigger than the other small buttons. */
+    min-block-size: 2.75rem;
+    padding-inline: 0.9rem;
+    /* A long press must not select text or scroll the page. */
+    touch-action: none;
+    user-select: none;
+
+    & svg {
+      inline-size: 1.1rem;
+      block-size: 1.1rem;
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 2;
+      stroke-linecap: round;
+    }
+  }
+
+  &:is([data-phase="holding"], [data-phase="latched"]) button {
+    color: var(--paper);
+    background: var(--blue-light);
+    border-color: var(--blue-light);
+  }
+
+  & output {
+    flex: 1;
+    min-inline-size: 0;
+    font-size: 0.85rem;
+    color: var(--ink-dim);
+
+    &.error {
+      color: var(--danger);
+    }
+  }
+}
+
 /* ---------- save status ---------- */
 
 .status {
@@ -1157,12 +1203,14 @@ main[aria-busy="true"],
   }
 }
 
-.photo-actions {
+.photo-actions,
+.dictate {
   display: flex;
   align-items: center;
 }
 
-.add-photo {
+.add-photo,
+.dictate button {
   font: inherit;
   font-size: 0.75rem;
   font-weight: 700;

@@ -11,13 +11,14 @@
 // failure is reported through `onError` as it happens.
 
 import { voiceToken } from "../server/voice";
-import { TARGET_RATE, toPcm16 } from "./pcm";
+import { rms, TARGET_RATE, toPcm16 } from "./pcm";
 import {
   EMPTY_TRANSCRIPT,
   parseServerMessage,
   reduceTranscript,
   transcriptText,
   type ServerEvent,
+  type Transcript,
 } from "./transcript";
 import { TRANSCRIBE_MODEL } from "./voice";
 
@@ -48,8 +49,10 @@ async function microphone(): Promise<MediaStream> {
 }
 
 export type DictationOptions = {
-  /** The text so far: finished turns, cleaned, plus the turn being spoken. */
-  readonly onText: (text: string) => void;
+  /** The text so far: finished turns, cleaned, and the turn being spoken. */
+  readonly onText: (transcript: Transcript) => void;
+  /** Loudness of the microphone, ten times a second, as root mean square. */
+  readonly onLevel: (rms: number) => void;
   readonly onError: (message: string) => void;
 };
 
@@ -130,7 +133,7 @@ export function startDictation(options: DictationOptions) {
       return;
     }
     transcript = reduceTranscript(transcript, event);
-    if (event.kind === "interim" || event.kind === "final") options.onText(transcriptText(transcript));
+    if (event.kind === "interim" || event.kind === "final") options.onText(transcript);
     // Only after our own end, and only once nothing is left mid-turn: a
     // `complete` can also close an earlier turn while the next is spoken.
     if (event.kind === "complete" && endSent && !transcript.open) finish();
@@ -148,7 +151,10 @@ export function startDictation(options: DictationOptions) {
     // The worklet already batches to 100 ms, the chunk size Google recommends.
     node.port.onmessage = (event: MessageEvent<{ samples: Float32Array; done: boolean }>) => {
       const { samples, done } = event.data;
-      if (samples.length) sendAudio(toPcm16(samples).toBase64());
+      if (samples.length) {
+        sendAudio(toPcm16(samples).toBase64());
+        options.onLevel(rms(samples));
+      }
       if (done) drained?.();
     };
     // Through a muted gain to the output, so the graph pulls the worklet

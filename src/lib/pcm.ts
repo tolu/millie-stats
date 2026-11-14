@@ -17,3 +17,11 @@ export function toPcm16(samples: Float32Array): Uint8Array {
   }
   return bytes;
 }
+
+/** How loud a batch was: the root mean square of its samples, 0 for silence. */
+export function rms(samples: Float32Array): number {
+  if (samples.length === 0) return 0;
+  let sum = 0;
+  for (const s of samples) sum += s * s;
+  return Math.sqrt(sum / samples.length);
+}

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { toPcm16 } from "./pcm";
+import { rms, toPcm16 } from "./pcm";
 
 describe("toPcm16", () => {
   it("writes signed 16-bit little-endian", () => {
@@ -19,5 +19,17 @@ describe("toPcm16", () => {
     const view = new DataView(toPcm16(Float32Array.of(1.5, -2)).buffer);
     expect(view.getInt16(0, true)).toBe(32767);
     expect(view.getInt16(2, true)).toBe(-32768);
+  });
+});
+
+describe("rms", () => {
+  it("is zero for silence and for nothing at all", () => {
+    expect(rms(new Float32Array(160))).toBe(0);
+    expect(rms(new Float32Array(0))).toBe(0);
+  });
+
+  it("measures loudness regardless of sign", () => {
+    expect(rms(Float32Array.of(0.5, -0.5, 0.5, -0.5))).toBeCloseTo(0.5);
+    expect(rms(Float32Array.of(1, 0, 0, 0))).toBeCloseTo(0.5);
   });
 });

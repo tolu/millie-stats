@@ -204,10 +204,11 @@ enters it.
 
 ### Dictation
 
-- **The day is locked from the mic click until the text is in.** The date nav
-  is `inert` and `toJournal` refuses; leaving the page cancels without
-  writing. A new way to change day must check `dictating()` too. The text is
-  appended through `edit` and the write queue like typing, never replacing.
+- **The day is locked from the mic click until the text is in**, by the
+  dialog being modal: `showModal()` makes the page inert, so nothing else
+  locks it. Opening it with `show()` would silently unlock the day. Only
+  Ferdig keeps the text; any other close (Avbryt, Esc, Android back) discards.
+  The text is appended through `edit` and the write queue like typing.
 - **The model and its config live in the token.** `buildTokenRequest` locks it
   to model, SMART mode and vocabulary, so a change made only in the browser is
   ignored. The Gemini key never leaves the worker.

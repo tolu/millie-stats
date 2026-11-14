@@ -109,16 +109,12 @@ export default function Day(props: {
   }
 
   function toJournal() {
-    if (dictating()) return;
     // Leaving the page unmounts this component, so the same flush applies.
     flushPending();
     props.onJournal();
   }
 
   let micButton: HTMLButtonElement | undefined;
-  // From the press until the text is in. Leaving meanwhile would either write
-  // it to a different day or, on unmount, throw it away.
-  const [dictating, setDictating] = createSignal(false);
 
   let noteTimer: ReturnType<typeof setTimeout> | undefined;
   // Flushes on disposal rather than discarding. Until this page could unmount,
@@ -218,8 +214,7 @@ export default function Day(props: {
         <Weight day={day()} weight={entry().weight} onSave={editWeight} />
       </Masthead>
 
-      {/* Inert while dictating: the text belongs to the day on screen. */}
-      <nav class="datenav" aria-label="Velg dag" inert={dictating()}>
+      <nav class="datenav" aria-label="Velg dag">
         <button
           type="button"
           class="chevron"
@@ -329,8 +324,8 @@ export default function Day(props: {
             />
           </label>
           <Dictate
+            day={day()}
             onText={appendDictation}
-            onBusy={setDictating}
             buttonRef={(el) => (micButton = el)}
           />
 

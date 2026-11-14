@@ -608,12 +608,9 @@ main[aria-busy="true"],
     display: inline-flex;
     align-items: center;
     gap: 0.4rem;
-    /* Held with a thumb, so it is bigger than the other small buttons. */
+    /* Tapped with a thumb, so it is bigger than the other small buttons. */
     min-block-size: 2.75rem;
     padding-inline: 0.9rem;
-    /* A long press must not select text or scroll the page. */
-    touch-action: none;
-    user-select: none;
 
     & svg {
       inline-size: 1.1rem;
@@ -625,7 +622,7 @@ main[aria-busy="true"],
     }
   }
 
-  &:is([data-phase="holding"], [data-phase="latched"]) button {
+  &[data-phase="recording"] button {
     color: var(--paper);
     background: var(--blue-light);
     border-color: var(--blue-light);

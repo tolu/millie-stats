@@ -2,24 +2,19 @@ import { createSignal, onSettled } from "solid-js";
 import { startDictation, type Dictation } from "./lib/dictation";
 import { voiceToken } from "./server/voice";
 
-/** Shorter than this, a press is a tap: it latches recording on instead. */
-const TAP_MS = 300;
-
-type Phase = "idle" | "holding" | "latched" | "finishing";
+type Phase = "idle" | "recording" | "finishing";
 
 /**
- * Push-to-talk for the note. Hold to talk, release to stop; a quick tap
- * latches it on until the next tap, because holding for a minute on a phone
- * is tiring.
+ * Dictation for the note: click to start, click to stop. Holding a button
+ * down was tried and dropped — tiring on a phone and on a laptop alike.
  *
- * The gesture state lives in plain variables, not signals: pointerdown and
- * pointerup read back what the other wrote, and signal writes are batched.
- * `view` is only what is drawn.
+ * `phase` is a plain variable because a click reads back what the previous
+ * one wrote, and signal writes are batched. `view` is only what is drawn.
  */
 export default function Dictate(props: {
   /** The finished, cleaned text. Called once per recording, never with "". */
   onText: (text: string) => void;
-  /** True from the press until the text is in: the day must not change meanwhile. */
+  /** True from the click until the text is in: the day must not change meanwhile. */
   onBusy: (busy: boolean) => void;
   buttonRef?: (button: HTMLButtonElement) => void;
 }) {
@@ -29,7 +24,6 @@ export default function Dictate(props: {
 
   let phase: Phase = "idle";
   let session: Dictation | null = null;
-  let pressedAt = 0;
 
   function enter(next: Phase) {
     phase = next;
@@ -40,7 +34,7 @@ export default function Dictate(props: {
     setError("");
     setLive("");
     props.onBusy(true);
-    // Inside the press: Chrome only lets audio start in a user gesture.
+    // Inside the click: Chrome only lets audio start in a user gesture.
     session = startDictation({
       getToken: voiceToken,
       onText: setLive,
@@ -50,13 +44,13 @@ export default function Dictate(props: {
         void stop();
       },
     });
-    enter("holding");
+    enter("recording");
   }
 
   async function stop() {
     const current = session;
-    // Once only: an error, a release and a cancel can all arrive for one recording.
-    if (!current || phase === "finishing") return;
+    // Once only: an error and a click can both arrive for one recording.
+    if (!current || phase !== "recording") return;
     enter("finishing");
     const text = await current.stop();
     session = null;
@@ -73,43 +67,19 @@ export default function Dictate(props: {
     session = null;
   });
 
-  function onPointerDown(event: PointerEvent & { currentTarget: HTMLButtonElement }) {
-    if (!event.isPrimary || event.button !== 0) return;
-    event.currentTarget.setPointerCapture(event.pointerId);
-    pressedAt = event.timeStamp;
+  function toggle() {
     if (phase === "idle") start();
-    else if (phase === "latched") void stop();
-  }
-
-  function onPointerUp(event: PointerEvent) {
-    if (phase !== "holding") return;
-    if (event.timeStamp - pressedAt < TAP_MS) enter("latched");
     else void stop();
-  }
-
-  function onPointerCancel() {
-    if (phase === "holding") void stop();
-  }
-
-  // Keyboard activation has no pointer events: Enter or Space toggles.
-  function onClick(event: MouseEvent) {
-    if (event.detail !== 0) return;
-    if (phase === "idle") {
-      start();
-      enter("latched");
-    } else if (phase === "latched") void stop();
   }
 
   const label = () => {
     switch (view()) {
-      case "holding":
-        return "Slipp for å stoppe";
-      case "latched":
-        return "Trykk for å stoppe";
+      case "recording":
+        return "Stopp";
       case "finishing":
         return "Skriver…";
       default:
-        return "Hold for å snakke";
+        return "Snakk inn";
     }
   };
 
@@ -119,12 +89,8 @@ export default function Dictate(props: {
         type="button"
         ref={(el) => props.buttonRef?.(el)}
         disabled={view() === "finishing"}
-        aria-pressed={view() === "holding" || view() === "latched" ? "true" : "false"}
-        onPointerDown={onPointerDown}
-        onPointerUp={onPointerUp}
-        onPointerCancel={onPointerCancel}
-        onClick={onClick}
-        onContextMenu={(e) => e.preventDefault()}
+        aria-pressed={view() === "recording" ? "true" : "false"}
+        onClick={toggle}
       >
         <svg viewBox="0 0 24 24" aria-hidden="true">
           <rect x="9" y="3" width="6" height="11" rx="3" />

@@ -34,14 +34,14 @@ npm test             # vitest, logic only
 npx tsc --noEmit     # TypeScript 7, ~0.3s
 npm run build        # client + server bundles
 npm run dev:worker   # the BUILT worker under wrangler dev
+npm run deploy       # build + deploy; the only way this app is deployed
 ```
 
 **Changing a server module means restarting the dev server.** Vite hot-reloads
 the client, but the workerd side keeps the old bundle, so edits to `db.ts`,
 `entry.ts` or anything else a server function imports keep running the previous
 version. It fails silently and looks exactly like a logic bug — a new field
-simply never arrives on the client. This cost real debugging time when `weight`
-was added to `parseEntry`.
+simply never arrives on the client.
 
 Never start a dev server with Bash — use the browser-preview tooling
 (`.claude/launch.json` defines the `dev` config). Verify UI changes by driving
@@ -142,16 +142,14 @@ enters it.
   fallback shows until the first value and never again. After that, a memo
   going pending keeps the old content on screen, and every write in the batch
   that started the fetch stays invisible until the data lands, including
-  writes that have nothing to do with it. Measured on rc.3 and rc.14 with
-  delayed requests: a change of day froze the label for the whole fetch, and
-  "lagret" waited for the trends. This file used to say the opposite, that a
-  refetch blanks the page; nobody had observed that.
+  writes that have nothing to do with it. Measured on rc.14 with delayed
+  requests: a change of day froze the label for the whole fetch, and "lagret"
+  waited for the trends.
 - **So a wait has to be shown on purpose.** `latest(x)` is where a held value
   is heading, `isPending(x)` is whether one is on the way. The date nav reads
   `latest` so a tap answers at once and a second tap counts from the day asked
   for; `<main>` goes `inert` while a day arrives, because a tick made under
-  the new label would be saved to the old day. In dev, `SILENT_HOLD` and
-  `LONG_HOLD` in the console name a wait nothing on screen admits to.
+  the new label would be saved to the old day.
 - **A write that starts a fetch gets a batch of its own.** Anything written
   in the same tick is held with it, before or after. `chartsStale` in
   `Day.tsx` is the one place the charts are told to refetch, and it defers
@@ -204,11 +202,22 @@ enters it.
   "Internal Server Error". Return `{ ok: false, message }` for anything the
   user can act on; let genuine faults throw.
 
+### Dictation
+
+- **The day is locked from the mic click until the text is in.** The date nav
+  is `inert` and `toJournal` refuses; leaving the page cancels without
+  writing. A new way to change day must check `dictating()` too. The text is
+  appended through `edit` and the write queue like typing, never replacing.
+- **The model and its config live in the token.** `buildTokenRequest` locks it
+  to model, SMART mode and vocabulary, so a change made only in the browser is
+  ignored. The Gemini key never leaves the worker.
+- **It is transcription, not an agent.** No Live agent model or system prompt:
+  it would answer with its own text instead of the user's words.
+
 ## Types
 
-`@cloudflare/workers-types` is a devDependency and supplies `D1Database` and
-`cloudflare:workers`. There is no generated `worker-configuration.d.ts` to
-maintain, and a fresh clone typechecks after `npm install` alone.
+`@cloudflare/workers-types` supplies `D1Database` and `cloudflare:workers`; do
+not generate a `worker-configuration.d.ts`.
 
 `erasableSyntaxOnly` is on: no enums, no namespaces with runtime output, no
 parameter properties. Node 24 strips types natively and nothing may depend on a
@@ -216,13 +225,10 @@ real compile step.
 
 ## Testing
 
-Logic only — dates, serialisation, trends, weekly workouts, the write queue,
-tokens, the prompt.
-No component tests.
+Logic only; no component tests.
 
 **Every bug fix gets a test, and the test must be verified to fail without the
-fix.** That discipline is what found the `?d=2026-02-31` hole. A test that
-never fails catches nothing.
+fix.** A test that never fails catches nothing.
 
 The prompt is snapshot-tested on purpose: changing what the model is told
 should show up as a reviewable diff.
@@ -244,8 +250,9 @@ should show up as a reviewable diff.
   migration is the opposite case — the new code needs the table, so migrate
   first, then deploy. That covers `0003_photos` and `0004_workouts`, and any
   migration that only adds. The R2 bucket must exist before either.
-- Testing summaries locally needs a real `ANTHROPIC_API_KEY` line in
-  `.dev.vars`. Never ask the user to paste a key into the conversation.
+- Summaries and dictation locally need real `ANTHROPIC_API_KEY` and
+  `GEMINI_API_KEY` lines in `.dev.vars`. Never ask the user to paste a key
+  into the conversation.
 - The built config keeps its own local D1 under `dist/`, so `rm -rf dist`
   destroys it. `npm run dev:worker` pins `--persist-to` to avoid that.
 - Seeded or scratch data is fake health data about a real dog. Clear it when
@@ -254,10 +261,10 @@ should show up as a reviewable diff.
 
 ## Working agreement
 
-- **Do not use git worktrees in this project.** Work in the checkout directly.
-  No `--worktree`, no `EnterWorktree`, and no `isolation: "worktree"` on
-  subagents. `.claude/settings.json` covers background sessions; the rest is on
-  you.
+- **A new worktree needs `npm install` and
+  `npx wrangler d1 migrations apply millie --local`** before the dev server
+  works: its local D1 starts empty, on purpose, so parallel sessions do not
+  share scratch data. `.dev.vars` is copied in via `.worktreeinclude`.
 - **Never commit or push without explicit consent for that specific change.**
   Staging is fine. One approval does not carry to the next commit.
 - Never amend, force-push, rebase or reset. Merge to integrate.

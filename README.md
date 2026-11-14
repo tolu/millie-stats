@@ -134,11 +134,12 @@ node scripts/seed-dev.mjs 2026-08-26 > /tmp/seed.sql && npx wrangler d1 execute 
 | `APP_PASSPHRASE` | Shared password. Until set, the app is locked and `/_login` returns 503. |
 | `COOKIE_SECRET` | Signs the session cookie. Any long random string. |
 | `ANTHROPIC_API_KEY` | Summaries only. From console.anthropic.com — a Claude subscription is not a key. |
+| `GEMINI_API_KEY` | Dictation only. From AI Studio; the worker mints short-lived, single-use tokens from it and never hands it out. |
 
 ## Deploy
 
 ```bash
-npm run build && npx wrangler deploy --config dist/server/wrangler.json
+npm run deploy
 ```
 
 ### Migrations
@@ -294,9 +295,9 @@ never touches a timezone. The exercise found the `?d=` validation gap instead.
 
 ## Testing
 
-`npm test` — 137 tests over dates, serialisation, the route, trend maths,
-weight interpolation, weekly workouts, the write queue, session tokens and the
-prompt. Logic only; no component tests.
+`npm test` — tests over dates, serialisation, the route, trend maths,
+weight interpolation, weekly workouts, the write queue, session tokens, the
+prompt and dictation's audio and transcript handling. Logic only; no component tests.
 
 Every test here was verified to fail without its implementation. Seven deliberate
 mutations, all caught. That is how the `?d=` bug surfaced and how the DST claim

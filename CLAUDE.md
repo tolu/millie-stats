@@ -7,6 +7,25 @@ it is and why; this file is what you need to change it safely.
 Live: https://millie-stats.tolu.workers.dev · one worker, one D1 named `millie`,
 one R2 bucket named `millie-photos`.
 
+## One browser: the latest Chrome on Android
+
+One person uses this app, in Chrome on an Android phone. No other browser is
+supported, and no code is written for one. (Chrome on iPhone is WebKit and is
+not this target either.)
+
+- **Reach for the newest platform feature that removes code from this repo** —
+  bleeding-edge HTML, CSS, JS and Web APIs included. Prefer declarative HTML
+  over JS state: `popover`, `<dialog>` and invoker commands
+  (`commandfor`/`command`) open and close things with no handler and no
+  signal. `Uint8Array.toBase64` replaced a helper; a 16 kHz `AudioContext`
+  replaced a hand-written resampler.
+- **No polyfills, fallbacks, vendor prefixes or feature detection** for other
+  browsers. A helper that only exists to paper over another engine is deleted,
+  not maintained.
+- Development and verification happen in desktop Chrome, but what differs on
+  the phone — microphone, camera, file pickers, viewport, gestures — is only
+  proven on the phone.
+
 ## Commands
 
 ```bash

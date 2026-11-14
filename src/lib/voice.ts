@@ -6,12 +6,16 @@
 // cannot be spent on anything else.
 //
 // SMART mode is the editor: it drops filler words and false starts, resolves
-// self-corrections ("three, no four km") and punctuates. It does not rewrite
-// what was said, which is the point in a record a vet reads.
+// self-corrections ("three, no four km") and punctuates. The note is raw
+// material for the summaries, never shown to the vet as it is, so a light
+// paraphrase is fine; a misheard symptom word is what would matter.
 //
-// Measured with synthetic speech on 2026-11-14: within one recording the model
+// Measured with synthetic speech on 2026-11-14: within one turn the model
 // settles on the first language it hears and renders the rest in it, so a
-// Swedish sentence after a Norwegian one comes out Norwegian.
+// Swedish sentence straight after a Norwegian one comes out Norwegian. A pause
+// of a couple of seconds starts a new turn, and each turn keeps its language.
+// SMART also paraphrases now and then: "i dag gikk vi" once came back as
+// "i dag gikk Millie og jeg".
 //
 // Nothing here may import from `cloudflare:` — the client imports the model id.
 

@@ -1,16 +1,17 @@
 // Runs on the audio thread. Copies the microphone's first channel out in
-// batches; resampling and encoding happen on the main thread in pcm.ts, where
-// they can be tested.
+// batches; encoding happens on the main thread in pcm.ts, where it can be
+// tested.
 //
 // Plain JavaScript on purpose: a worklet module is loaded by URL and gets no
-// build step, and static imports inside worklets are not dependable on iOS.
+// build step.
 //
-// The audio thread calls process() with 128-frame blocks, ~375 times a second
-// at 48 kHz. Posting each one would flood the main thread, so they are batched
-// to ~40 ms. A "flush" message posts what is left, so the last words before
-// the button is released are not dropped.
+// The audio thread calls process() with 128-frame blocks, 125 times a second
+// at 16 kHz. They are batched to 100 ms, the chunk size the model wants, so
+// the main thread hears from here ten times a second. A "flush" message posts
+// what is left, so the last words before the button is released are not
+// dropped.
 
-const BATCH = 2048;
+const BATCH = 1600;
 
 class PcmCapture extends AudioWorkletProcessor {
   constructor() {

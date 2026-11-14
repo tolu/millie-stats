@@ -6,24 +6,19 @@
 // cannot be spent on anything else.
 //
 // SMART mode is the editor: it drops filler words and false starts, resolves
-// self-corrections ("three, no four km") and punctuates. The note is raw
-// material for the summaries, never shown to the vet as it is, so a light
-// paraphrase is fine; a misheard symptom word is what would matter.
+// self-corrections ("three, no four km") and punctuates. It also paraphrases
+// now and then ("i dag gikk vi" once came back as "i dag gikk Millie og jeg"),
+// which is fine: the note is raw material for the summaries, never shown to
+// the vet. A misheard symptom word is what would matter.
 //
-// Measured with synthetic speech on 2026-11-14: within one turn the model
-// settles on the first language it hears and renders the rest in it, so a
-// Swedish sentence straight after a Norwegian one comes out Norwegian. A pause
-// of a couple of seconds starts a new turn, and each turn keeps its language.
-// SMART also paraphrases now and then: "i dag gikk vi" once came back as
-// "i dag gikk Millie og jeg".
+// Measured on 2026-11-14: within one turn the model renders everything in the
+// first language it hears, so Swedish straight after Norwegian comes out
+// Norwegian. A pause of a couple of seconds starts a new turn with its own.
 //
 // Nothing here may import from `cloudflare:` — the client imports the model id.
 
 /** A preview model. When Google retires it, this is the one line to change. */
 export const TRANSCRIBE_MODEL = "gemini-3.5-transcribe-live";
-
-/** Google: up to 1000 terms accepted, best results up to about 100. */
-export const MAX_VOCABULARY = 100;
 
 const AUTH_TOKENS_URL = "https://generativelanguage.googleapis.com/v1beta/auth_tokens";
 
@@ -45,7 +40,6 @@ export function buildVocabulary(terms: readonly string[]): string[] {
     if (!term || seen.has(key)) continue;
     seen.add(key);
     vocabulary.push(term);
-    if (vocabulary.length === MAX_VOCABULARY) break;
   }
   return vocabulary;
 }

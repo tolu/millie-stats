@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 import {
   buildTokenRequest,
   buildVocabulary,
-  MAX_VOCABULARY,
   mintToken,
   TRANSCRIBE_MODEL,
 } from "./voice";
@@ -20,13 +19,6 @@ describe("buildVocabulary", () => {
       "Gnikking",
     ]);
   });
-
-  it("caps the list where the model stops getting better from it", () => {
-    const many = Array.from({ length: 300 }, (_, i) => `term${i}`);
-    const vocabulary = buildVocabulary(many);
-    expect(vocabulary).toHaveLength(MAX_VOCABULARY);
-    expect(vocabulary[0]).toBe("Millie");
-  });
 });
 
 describe("buildTokenRequest", () => {
@@ -41,18 +33,14 @@ describe("buildTokenRequest", () => {
 
   it("locks the token to the transcription model in SMART mode", () => {
     // The lock is the point: a leaked token must not be usable for anything
-    // else, so model and config live here, not in the browser.
+    // else, so model and config live here, not in the browser. `toEqual` also
+    // rules out `languageCodes`: detection is what lets Swedish and Norwegian
+    // both through.
     expect(request.bidiGenerateContentSetup).toEqual({
       model: `models/${TRANSCRIBE_MODEL}`,
       generationConfig: { responseModalities: ["TEXT"] },
       inputAudioTranscription: { mode: "SMART", customVocabulary: ["Millie"] },
     });
-  });
-
-  it("leaves the language to detection, so Swedish and Norwegian both work", () => {
-    expect(request.bidiGenerateContentSetup.inputAudioTranscription).not.toHaveProperty(
-      "languageCodes",
-    );
   });
 });
 
@@ -89,6 +77,15 @@ describe("mintToken", () => {
       respond(400, { error: { message: "API key not valid" } }),
     );
     expect(reply).toEqual({ ok: false, message: "Gemini: API key not valid" });
+  });
+
+  it("falls back to the status when the error body is not JSON", async () => {
+    // What a proxy or an outage in front of Google tends to send.
+    const fetchFn: typeof fetch = async () => new Response("<html>Bad Gateway</html>", { status: 502 });
+    expect(await mintToken("k", request, fetchFn)).toEqual({
+      ok: false,
+      message: "Gemini: HTTP 502",
+    });
   });
 
   it("reports a reply without a token instead of returning undefined", async () => {

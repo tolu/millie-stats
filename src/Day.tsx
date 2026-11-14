@@ -91,8 +91,7 @@ export default function Day(props: {
   }
 
   function goTo(next: string) {
-    // The text being dictated belongs to the day on screen.
-    if (next > today() || dictating()) return;
+    if (next > today()) return;
     const move = () => {
       // A pending note save belongs to the day being left, so flush it before
       // the queue is reset - otherwise navigating away loses what was typed.
@@ -219,6 +218,7 @@ export default function Day(props: {
         <Weight day={day()} weight={entry().weight} onSave={editWeight} />
       </Masthead>
 
+      {/* Inert while dictating: the text belongs to the day on screen. */}
       <nav class="datenav" aria-label="Velg dag" inert={dictating()}>
         <button
           type="button"

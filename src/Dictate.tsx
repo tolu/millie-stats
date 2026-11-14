@@ -1,6 +1,5 @@
 import { createSignal, onSettled } from "solid-js";
 import { startDictation, type Dictation } from "./lib/dictation";
-import { voiceToken } from "./server/voice";
 
 type Phase = "idle" | "recording" | "finishing";
 
@@ -8,7 +7,7 @@ type Phase = "idle" | "recording" | "finishing";
  * Dictation for the note: click to start, click to stop. Holding a button
  * down was tried and dropped — tiring on a phone and on a laptop alike.
  *
- * `phase` is a plain variable because a click reads back what the previous
+ * `session` is a plain variable because a click reads back what the previous
  * one wrote, and signal writes are batched. `view` is only what is drawn.
  */
 export default function Dictate(props: {
@@ -22,13 +21,7 @@ export default function Dictate(props: {
   const [live, setLive] = createSignal("");
   const [error, setError] = createSignal("");
 
-  let phase: Phase = "idle";
   let session: Dictation | null = null;
-
-  function enter(next: Phase) {
-    phase = next;
-    setView(next);
-  }
 
   function start() {
     setError("");
@@ -36,7 +29,6 @@ export default function Dictate(props: {
     props.onBusy(true);
     // Inside the click: Chrome only lets audio start in a user gesture.
     session = startDictation({
-      getToken: voiceToken,
       onText: setLive,
       // A failure ends the recording; whatever was understood is still kept.
       onError: (message) => {
@@ -44,19 +36,22 @@ export default function Dictate(props: {
         void stop();
       },
     });
-    enter("recording");
+    setView("recording");
   }
 
   async function stop() {
     const current = session;
-    // Once only: an error and a click can both arrive for one recording.
-    if (!current || phase !== "recording") return;
-    enter("finishing");
+    if (!current) return;
+    setView("finishing");
     const text = await current.stop();
+    // Whoever gets here first owns the text: an error and a click can both
+    // stop one recording, and leaving the page cancels it and clears
+    // `session`, so nothing is written to a day no longer on screen.
+    if (session !== current) return;
     session = null;
     if (text) props.onText(text);
     setLive("");
-    enter("idle");
+    setView("idle");
     props.onBusy(false);
   }
 
@@ -68,8 +63,8 @@ export default function Dictate(props: {
   });
 
   function toggle() {
-    if (phase === "idle") start();
-    else void stop();
+    if (session) void stop();
+    else start();
   }
 
   const label = () => {

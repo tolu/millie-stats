@@ -10,7 +10,8 @@
 // dropped connection halfway through should still keep the first half. A
 // failure is reported through `onError` as it happens.
 
-import { createChunker, TARGET_RATE, toPcm16 } from "./pcm";
+import { voiceToken } from "../server/voice";
+import { TARGET_RATE, toPcm16 } from "./pcm";
 import {
   EMPTY_TRANSCRIPT,
   parseServerMessage,
@@ -18,7 +19,7 @@ import {
   transcriptText,
   type ServerEvent,
 } from "./transcript";
-import { TRANSCRIBE_MODEL, type TokenReply } from "./voice";
+import { TRANSCRIBE_MODEL } from "./voice";
 
 const LIVE_URL =
   "wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1beta.GenerativeService.BidiGenerateContentConstrained";
@@ -33,15 +34,10 @@ const FINAL_MS = 4_000;
 /** After release, if the session never came up. */
 const CONNECT_MS = 8_000;
 
-export type AudioSource = { readonly node: AudioNode; stop(): void };
-
-/** The default source. Injectable so the pipeline can be driven without a mic. */
-export async function microphone(context: AudioContext): Promise<AudioSource> {
-  let stream: MediaStream;
+/** Chrome's defaults already cancel echo, suppress noise and control gain. */
+async function microphone(): Promise<MediaStream> {
   try {
-    stream = await navigator.mediaDevices.getUserMedia({
-      audio: { channelCount: 1, echoCancellation: true, noiseSuppression: true, autoGainControl: true },
-    });
+    return await navigator.mediaDevices.getUserMedia({ audio: true });
   } catch (cause) {
     throw new Error(
       cause instanceof DOMException && cause.name === "NotAllowedError"
@@ -49,25 +45,18 @@ export async function microphone(context: AudioContext): Promise<AudioSource> {
         : "Fikk ikke tak i mikrofonen.",
     );
   }
-  return {
-    node: context.createMediaStreamSource(stream),
-    stop: () => stream.getTracks().forEach((track) => track.stop()),
-  };
 }
 
 export type DictationOptions = {
-  readonly getToken: () => Promise<TokenReply>;
   /** The text so far: finished turns, cleaned, plus the turn being spoken. */
   readonly onText: (text: string) => void;
   readonly onError: (message: string) => void;
-  readonly source?: (context: AudioContext) => Promise<AudioSource>;
 };
 
 /** Call from inside the tap: Chrome only lets audio start in a user gesture. */
 export function startDictation(options: DictationOptions) {
   // At the model's rate: Chrome resamples the microphone into it.
   const context = new AudioContext({ sampleRate: TARGET_RATE });
-  void context.resume();
 
   let transcript = EMPTY_TRANSCRIPT;
   let socket: WebSocket | null = null;
@@ -76,8 +65,7 @@ export function startDictation(options: DictationOptions) {
   let ending = false;
   let endSent = false;
   let finished = false;
-  let failed = false;
-  let source: AudioSource | null = null;
+  let stream: MediaStream | null = null;
   let worklet: AudioWorkletNode | null = null;
   let drained: (() => void) | null = null;
   let timer: ReturnType<typeof setTimeout> | undefined;
@@ -91,8 +79,8 @@ export function startDictation(options: DictationOptions) {
   }
 
   function releaseAudio() {
-    source?.stop();
-    source = null;
+    stream?.getTracks().forEach((track) => track.stop());
+    stream = null;
     worklet?.port.close();
     worklet = null;
     if (context.state !== "closed") void context.close().catch(() => {});
@@ -108,10 +96,7 @@ export function startDictation(options: DictationOptions) {
   }
 
   function fail(message: string) {
-    if (!failed && !finished) {
-      failed = true;
-      options.onError(message);
-    }
+    if (!finished) options.onError(message);
     finish();
   }
 
@@ -148,38 +133,35 @@ export function startDictation(options: DictationOptions) {
     if (event.kind === "interim" || event.kind === "final") options.onText(transcriptText(transcript));
     // Only after our own end, and only once nothing is left mid-turn: a
     // `complete` can also close an earlier turn while the next is spoken.
-    if (event.kind === "complete" && endSent && !transcript.interim) finish();
+    if (event.kind === "complete" && endSent && !transcript.open) finish();
   }
 
   async function startAudio() {
     await context.audioWorklet.addModule(WORKLET_URL);
-    const opened = await (options.source ?? microphone)(context);
+    const opened = await microphone();
     if (finished || ending) {
-      opened.stop();
+      opened.getTracks().forEach((track) => track.stop());
       return;
     }
-    source = opened;
-    const chunker = createChunker();
+    stream = opened;
     const node = new AudioWorkletNode(context, "pcm-capture");
+    // The worklet already batches to 100 ms, the chunk size Google recommends.
     node.port.onmessage = (event: MessageEvent<{ samples: Float32Array; done: boolean }>) => {
-      for (const chunk of chunker.push(toPcm16(event.data.samples))) sendAudio(chunk.toBase64());
-      if (event.data.done) {
-        const rest = chunker.flush();
-        if (rest) sendAudio(rest.toBase64());
-        drained?.();
-      }
+      const { samples, done } = event.data;
+      if (samples.length) sendAudio(toPcm16(samples).toBase64());
+      if (done) drained?.();
     };
     // Through a muted gain to the output, so the graph pulls the worklet
     // without playing the microphone back through the speaker.
     const mute = new GainNode(context, { gain: 0 });
-    source.node.connect(node);
+    context.createMediaStreamSource(opened).connect(node);
     node.connect(mute);
     mute.connect(context.destination);
     worklet = node;
   }
 
   async function connect() {
-    const reply = await options.getToken();
+    const reply = await voiceToken();
     if (!reply.ok) throw new Error(reply.message);
     if (finished) return;
     const ws = new WebSocket(`${LIVE_URL}?access_token=${encodeURIComponent(reply.token)}`);
@@ -225,7 +207,7 @@ export function startDictation(options: DictationOptions) {
       await done;
       return transcriptText(transcript);
     },
-    /** Abandons the recording: no text, no error. For when the page goes away. */
+    /** Abandons the recording without an error. For when the page goes away. */
     cancel() {
       finish();
     },

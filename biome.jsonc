@@ -1,0 +1,49 @@
+{
+  "$schema": "./node_modules/@biomejs/biome/configuration_schema.json",
+  "vcs": {
+    "enabled": true,
+    "clientKind": "git",
+    "useIgnoreFile": true
+  },
+  "files": {
+    "includes": ["**", "!!**/dist", "!**/*.md"]
+  },
+  "formatter": {
+    "enabled": true,
+    "indentStyle": "space",
+    "indentWidth": 2,
+    "lineWidth": 100
+  },
+  "linter": {
+    "enabled": true,
+    "domains": {
+      "solid": "recommended"
+    },
+    "rules": {
+      "preset": "recommended",
+      "style": {
+        // With `noUncheckedIndexedAccess`, `samples[i]!` inside a loop bounded
+        // by `samples.length` is the idiom, not a shortcut: the alternative is
+        // a runtime check for a case the loop already rules out.
+        "noNonNullAssertion": "off",
+        // styles.css is ordered by component, and its later, less specific
+        // rules are meant to sit there. Reordering it to please the rule moves
+        // the cascade with no bug found and a visual check on the phone owed.
+        "noDescendingSpecificity": "off"
+      }
+    }
+  },
+  "javascript": {
+    "formatter": {
+      "quoteStyle": "double"
+    }
+  },
+  "assist": {
+    "enabled": true,
+    "actions": {
+      "source": {
+        "organizeImports": "on"
+      }
+    }
+  }
+}

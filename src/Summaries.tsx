@@ -46,7 +46,7 @@ export default function Summaries(props: { endDay: string }) {
       <h2 id="summaries-heading">Oppsummering</h2>
 
       <div class="summary-controls">
-        <div class="window-toggle" role="group" aria-label="Periode å oppsummere">
+        <fieldset class="window-toggle" aria-label="Periode å oppsummere">
           <For each={RANGES}>
             {(option) => (
               <label>
@@ -60,7 +60,7 @@ export default function Summaries(props: { endDay: string }) {
               </label>
             )}
           </For>
-        </div>
+        </fieldset>
         <button type="button" class="generate" disabled={busy()} onClick={() => void generate()}>
           {busy() ? "Skriver…" : "Lag oppsummering"}
         </button>
@@ -77,10 +77,7 @@ export default function Summaries(props: { endDay: string }) {
       </Show>
 
       <Loading fallback={<p class="muted">laster…</p>}>
-        <Show
-          when={all().length > 0}
-          fallback={<p class="muted">Ingen oppsummeringer ennå.</p>}
-        >
+        <Show when={all().length > 0} fallback={<p class="muted">Ingen oppsummeringer ennå.</p>}>
           <ul class="summary-list">
             <For each={all()}>
               {(summary) => (

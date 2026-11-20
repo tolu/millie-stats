@@ -1,6 +1,6 @@
 import { createSignal, onSettled, Show } from "solid-js";
 import { formatLong } from "./lib/date";
-import { startDictation, type Dictation } from "./lib/dictation";
+import { type Dictation, startDictation } from "./lib/dictation";
 import { EMPTY_TRANSCRIPT } from "./lib/transcript";
 
 /** Below this the microphone hears a room, not a voice. */
@@ -131,16 +131,16 @@ export default function Dictate(props: {
           <span class="ring" />
           <span class="ring" />
           <span class="ring" />
-          <svg class="core" viewBox="0 0 24 24">
+          <svg class="core" viewBox="0 0 24 24" aria-hidden="true">
             <Mic />
           </svg>
-          <svg class="spark" viewBox="0 0 24 24">
+          <svg class="spark" viewBox="0 0 24 24" aria-hidden="true">
             <path d={STAR} />
           </svg>
-          <svg class="spark" viewBox="0 0 24 24">
+          <svg class="spark" viewBox="0 0 24 24" aria-hidden="true">
             <path d={STAR} />
           </svg>
-          <svg class="spark" viewBox="0 0 24 24">
+          <svg class="spark" viewBox="0 0 24 24" aria-hidden="true">
             <path d={STAR} />
           </svg>
         </div>

@@ -3,28 +3,28 @@ import {
   createSignal,
   For,
   isPending,
-  latest,
   Loading,
+  latest,
   onFlush,
   onSettled,
   untrack,
 } from "solid-js";
-import { SYMPTOMS } from "./symptoms";
-import { addDays, formatLong } from "./lib/date";
-import { EMPTY_ENTRY, isFlagged, withFlag, withNote, withWeight, withWorkout } from "./lib/entry";
-import type { DayEntry } from "./lib/entry";
-import { appendToNote } from "./lib/transcript";
-import { createDebounced } from "./lib/debounce";
-import { createWriteQueue } from "./lib/writeQueue";
-import type { WriteState } from "./lib/writeQueue";
 import Dictate from "./Dictate";
+import { addDays, formatLong } from "./lib/date";
+import { createDebounced } from "./lib/debounce";
+import type { DayEntry } from "./lib/entry";
+import { EMPTY_ENTRY, isFlagged, withFlag, withNote, withWeight, withWorkout } from "./lib/entry";
+import { appendToNote } from "./lib/transcript";
+import type { WriteState } from "./lib/writeQueue";
+import { createWriteQueue } from "./lib/writeQueue";
 import Masthead from "./Masthead";
 import Photos from "./Photos";
-import Weight from "./Weight";
-import Workouts from "./Workouts";
-import Trends from "./Trends";
 import Summaries from "./Summaries";
 import { getDay, saveDay } from "./server/db";
+import { SYMPTOMS } from "./symptoms";
+import Trends from "./Trends";
+import Weight from "./Weight";
+import Workouts from "./Workouts";
 
 /** Typing shouldn't fire a write per keystroke. Ticking a box should. */
 const NOTE_DEBOUNCE_MS = 500;
@@ -242,6 +242,7 @@ export default function Day(props: {
         <button type="button" class="current" onClick={() => picker.showPicker()}>
           {formatLong(target())}
         </button>
+        {/* biome-ignore lint/a11y/noAriaHiddenOnFocusable: the button above is the control; this input only gives showPicker() a native picker to open, so it stays out of the tab order and is not announced twice */}
         <input
           ref={picker}
           type="date"
@@ -253,12 +254,7 @@ export default function Day(props: {
         />
 
         {target() === today() ? (
-          <button
-            type="button"
-            class="chevron"
-            disabled
-            aria-label="Kan ikke gå fram i tid"
-          >
+          <button type="button" class="chevron" disabled aria-label="Kan ikke gå fram i tid">
             ›
           </button>
         ) : (
@@ -338,11 +334,7 @@ export default function Day(props: {
               onInput={(e) => editNote(e.currentTarget.value)}
             />
           </label>
-          <Dictate
-            day={day()}
-            onText={appendDictation}
-            buttonRef={(el) => (micButton = el)}
-          />
+          <Dictate day={day()} onText={appendDictation} buttonRef={(el) => (micButton = el)} />
 
           <output class="status" data-state={status()} aria-live="polite">
             {statusText()}

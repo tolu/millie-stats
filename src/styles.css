@@ -149,7 +149,6 @@ main[aria-busy="true"],
   color: var(--ink-dim);
 }
 
-
 /* ---------- date navigation ---------- */
 
 .datenav {
@@ -400,14 +399,15 @@ main[aria-busy="true"],
   /* Anchored to its own info button, flipping above when there is no room
      below. Without anchor positioning support it centres, which is fine. */
   position-area: block-end span-inline-start;
-  position-try-fallbacks: block-start span-inline-start, block-end span-inline-end;
+  position-try-fallbacks:
+    block-start span-inline-start,
+    block-end span-inline-end;
   margin-block: 0.35rem;
 
   & strong {
     color: var(--ink);
   }
 }
-
 
 /* ---------- workouts ---------- */
 
@@ -653,7 +653,6 @@ main[aria-busy="true"],
   }
 }
 
-
 /* Day changes crossfade rather than snapping. */
 @view-transition {
   navigation: none;
@@ -662,6 +661,7 @@ main[aria-busy="true"],
 @media (prefers-reduced-motion: reduce) {
   *,
   *::after {
+    /* biome-ignore lint/complexity/noImportantStyles: a reduced-motion override has to beat every component's own transition; this is what !important is for */
     transition-duration: 0.01ms !important;
   }
 }
@@ -820,6 +820,9 @@ main[aria-busy="true"],
 /* ---------- window toggle ---------- */
 
 .window-toggle {
+  /* A <fieldset>: drop the margin and min-content floor it brings. */
+  margin: 0;
+  min-inline-size: 0;
   display: flex;
   gap: 0.25rem;
   padding: 0.25rem;

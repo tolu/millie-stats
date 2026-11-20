@@ -32,10 +32,18 @@ not this target either.)
 npm run dev          # vite + workerd, localhost:5173, login bypassed via .dev.vars
 npm test             # vitest, logic only
 npx tsc --noEmit     # TypeScript 7, ~0.3s
+npm run check        # Biome: lint, format and import order, read-only
+npm run fix          # Biome: apply formatting and safe fixes
 npm run build        # client + server bundles
 npm run dev:worker   # the BUILT worker under wrangler dev
 npm run deploy       # build + deploy; the only way this app is deployed
 ```
+
+CI (`.github/workflows/ci.yml`) runs `biome ci`, `tsc`, the tests and the
+build on every pull request and on main. Run `npm run fix` before committing.
+Biome leaves Markdown alone on purpose: it pads every table cell to the widest
+row, so a one-row change rewrites the table. A rule turned off, or a
+`biome-ignore`, says why where it is written.
 
 Server modules reload without a restart since `@solidjs/vite-plugin` 3.0 —
 an edit to `db.ts` reaches the next call. Before it, workerd kept the old

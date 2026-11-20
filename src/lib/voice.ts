@@ -77,10 +77,14 @@ export async function mintToken(
     });
     body = (await response.json().catch(() => undefined)) as typeof body;
   } catch (cause) {
-    return { ok: false, message: `Gemini: ${cause instanceof Error ? cause.message : String(cause)}` };
+    return {
+      ok: false,
+      message: `Gemini: ${cause instanceof Error ? cause.message : String(cause)}`,
+    };
   }
   if (!response.ok) {
-    const detail = typeof body?.error?.message === "string" ? body.error.message : `HTTP ${response.status}`;
+    const detail =
+      typeof body?.error?.message === "string" ? body.error.message : `HTTP ${response.status}`;
     return { ok: false, message: `Gemini: ${detail}` };
   }
   if (typeof body?.name !== "string" || !body.name) {

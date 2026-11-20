@@ -8,6 +8,8 @@
     "preview": "vite preview",
     "dev:worker": "wrangler dev --config dist/server/wrangler.json --persist-to .wrangler/state",
     "test": "vitest run",
+    "check": "biome check .",
+    "fix": "biome check --write .",
     "deploy": "npm run build && wrangler deploy",
     "db:local": "wrangler d1 execute millie --local --file",
     "db:remote": "wrangler d1 execute millie --remote --file"
@@ -19,6 +21,7 @@
     "zod": "^4.6.7"
   },
   "devDependencies": {
+    "@biomejs/biome": "2.6.8",
     "@cloudflare/vite-plugin": "^1.70.1",
     "@cloudflare/workers-types": "^5.20261120.1",
     "@solidjs/vite-plugin": "^3.0.1",

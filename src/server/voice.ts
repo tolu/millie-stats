@@ -6,8 +6,8 @@
 // the `/_server` gate in worker.ts, so only a signed-in person can spend the
 // Gemini key, and there is no second gate to forget.
 
-import { SYMPTOMS } from "../symptoms";
 import { buildTokenRequest, buildVocabulary, mintToken, type TokenReply } from "../lib/voice";
+import { SYMPTOMS } from "../symptoms";
 import { listWorkouts } from "./db";
 
 async function bindings() {

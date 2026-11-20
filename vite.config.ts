@@ -1,7 +1,7 @@
 import { execSync } from "node:child_process";
-import { defineConfig, type Plugin } from "vite";
-import solid from "@solidjs/vite-plugin";
 import { cloudflare } from "@cloudflare/vite-plugin";
+import solid from "@solidjs/vite-plugin";
+import { defineConfig, type Plugin } from "vite";
 
 /**
  * Builds the client environment before anything else.
@@ -22,7 +22,7 @@ function buildClientFirst(): Plugin {
     buildApp: {
       order: "pre",
       async handler(builder) {
-        const client = builder.environments["client"];
+        const client = builder.environments.client;
         if (client && !client.isBuilt) await builder.build(client);
       },
     },

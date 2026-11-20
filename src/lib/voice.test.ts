@@ -1,10 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  buildTokenRequest,
-  buildVocabulary,
-  mintToken,
-  TRANSCRIBE_MODEL,
-} from "./voice";
+import { buildTokenRequest, buildVocabulary, mintToken, TRANSCRIBE_MODEL } from "./voice";
 
 const NOW = Date.UTC(2026, 10, 14, 12, 0, 0);
 
@@ -81,7 +76,8 @@ describe("mintToken", () => {
 
   it("falls back to the status when the error body is not JSON", async () => {
     // What a proxy or an outage in front of Google tends to send.
-    const fetchFn: typeof fetch = async () => new Response("<html>Bad Gateway</html>", { status: 502 });
+    const fetchFn: typeof fetch = async () =>
+      new Response("<html>Bad Gateway</html>", { status: 502 });
     expect(await mintToken("k", request, fetchFn)).toEqual({
       ok: false,
       message: "Gemini: HTTP 502",

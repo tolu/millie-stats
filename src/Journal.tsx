@@ -1,11 +1,11 @@
 import { createMemo, createSignal, For, onSettled, Show } from "solid-js";
 import { formatLong } from "./lib/date";
-import { isFlagged, workoutsDone } from "./lib/entry";
 import type { DayEntry } from "./lib/entry";
-import { SYMPTOMS } from "./symptoms";
+import { isFlagged, workoutsDone } from "./lib/entry";
 import Masthead from "./Masthead";
-import { listNotes } from "./server/db";
 import type { NoteRecord } from "./server/db";
+import { listNotes } from "./server/db";
+import { SYMPTOMS } from "./symptoms";
 
 const PAGE = 10;
 
@@ -15,10 +15,7 @@ const PAGE = 10;
  * Read-only on purpose. The day view already edits and shows photos, so each
  * entry's date is a link into it rather than a second place to change things.
  */
-export default function Journal(props: {
-  onDay: () => void;
-  onOpenDay: (day: string) => void;
-}) {
+export default function Journal(props: { onDay: () => void; onOpenDay: (day: string) => void }) {
   // Rendered state.
   const [rows, setRows] = createSignal<NoteRecord[]>([]);
   const [busy, setBusy] = createSignal(false);
@@ -57,8 +54,7 @@ export default function Journal(props: {
       // Fetched by hand rather than through a memo: a memo reading the cursor
       // would hold one page, not the list so far, so the accumulation needs
       // its own state either way.
-      const page =
-        cursor === undefined ? await listNotes(PAGE) : await listNotes(PAGE, cursor);
+      const page = cursor === undefined ? await listNotes(PAGE) : await listNotes(PAGE, cursor);
       // Callback form: appending must build on the latest array, never on one
       // read back after a batched write.
       setRows((current) => [...current, ...page]);
@@ -108,9 +104,7 @@ export default function Journal(props: {
       <main class="journal">
         <h2 class="journal-heading">Journal</h2>
         <ul class="journal-list">
-          <For each={rows()}>
-            {(row) => <Entry row={row} onOpen={props.onOpenDay} />}
-          </For>
+          <For each={rows()}>{(row) => <Entry row={row} onOpen={props.onOpenDay} />}</For>
         </ul>
 
         {/* Always rendered, so the observer never loses its target. What stops
@@ -150,11 +144,7 @@ function Entry(props: { row: NoteRecord; onOpen: (day: string) => void }) {
     <li class="entry">
       <div class="entry-head">
         {/* The heading is the way back into the day itself. */}
-        <button
-          type="button"
-          class="entry-day"
-          onClick={() => props.onOpen(props.row.day)}
-        >
+        <button type="button" class="entry-day" onClick={() => props.onOpen(props.row.day)}>
           {formatLong(props.row.day)}
         </button>
         <Show when={props.row.hasPhotos}>
@@ -210,9 +200,7 @@ function Marks(props: { entry: DayEntry }) {
           <span
             class="entry-mark"
             style={{
-              background: isFlagged(props.entry, symptom.id)
-                ? symptom.color
-                : "var(--line-strong)",
+              background: isFlagged(props.entry, symptom.id) ? symptom.color : "var(--line-strong)",
             }}
           />
         )}

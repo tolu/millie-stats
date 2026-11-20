@@ -13,11 +13,7 @@ export type Presence = 1 | 0 | null;
 
 export type EntriesByDay = ReadonlyMap<string, DayEntry>;
 
-export function presenceOn(
-  day: string,
-  entries: EntriesByDay,
-  symptomId: string,
-): Presence {
+export function presenceOn(day: string, entries: EntriesByDay, symptomId: string): Presence {
   const entry = entries.get(day);
   if (!entry) return null;
   return isFlagged(entry, symptomId) ? 1 : 0;
@@ -36,10 +32,7 @@ export function seriesFor(
  * Returns null for a position whose whole window is unlogged — there is
  * nothing to average, and drawing a 0 there would be a lie.
  */
-export function rollingAverage(
-  series: readonly Presence[],
-  window: number,
-): (number | null)[] {
+export function rollingAverage(series: readonly Presence[], window: number): (number | null)[] {
   if (window <= 0) throw new Error(`Window must be positive, got ${window}`);
   return series.map((_, i) => {
     const start = Math.max(0, i - window + 1);

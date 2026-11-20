@@ -25,9 +25,11 @@ describe("presence", () => {
       ["2026-08-24", HIT],
       ["2026-08-26", CLEAR],
     ]);
-    expect(
-      seriesFor(["2026-08-24", "2026-08-25", "2026-08-26"], entries, "nagging"),
-    ).toEqual([1, null, 0]);
+    expect(seriesFor(["2026-08-24", "2026-08-25", "2026-08-26"], entries, "nagging")).toEqual([
+      1,
+      null,
+      0,
+    ]);
   });
 });
 

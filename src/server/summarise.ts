@@ -7,10 +7,10 @@ import { addDays, diffDays, isDay } from "../lib/date";
 import type { DayEntry } from "../lib/entry";
 import { parseEntry } from "../lib/entry";
 import { coverage } from "../lib/trends";
-import { buildUserMessage, SYSTEM_PROMPT } from "./prompt";
+import type { SummaryRecord } from "./db";
 import { saveSummary } from "./db";
 import { failureMessage } from "./failure";
-import type { SummaryRecord } from "./db";
+import { buildUserMessage, SYSTEM_PROMPT } from "./prompt";
 
 // Sonnet 5 over Opus 5: this is "read a table, notice a trend, write two
 // paragraphs", which is squarely its strength. 2.5x cheaper and noticeably
@@ -26,9 +26,7 @@ const SummarySchema = z.object({
   brief: z
     .string()
     .describe("Klinisk oppsummering til veterinæren, på norsk. Tett, faktisk, datert."),
-  recap: z
-    .string()
-    .describe("Kort, varmt avsnitt på hverdagsnorsk til eieren. Ingen fagspråk."),
+  recap: z.string().describe("Kort, varmt avsnitt på hverdagsnorsk til eieren. Ingen fagspråk."),
 });
 
 async function bindings() {
@@ -40,10 +38,7 @@ async function bindings() {
  * Reads a period plus the equal-length one before it in a single query, so the
  * model can describe change rather than just state.
  */
-async function loadEntries(
-  from: string,
-  to: string,
-): Promise<Map<string, DayEntry>> {
+async function loadEntries(from: string, to: string): Promise<Map<string, DayEntry>> {
   const { DB } = await bindings();
   const { results } = await DB.prepare(
     `SELECT day, data FROM days WHERE day >= ?1 AND day <= ?2 ORDER BY day ASC`,
@@ -93,31 +88,31 @@ export async function summarise(from: string, to: string): Promise<SummaryResult
   }
 
   const client = new Anthropic({ apiKey: ANTHROPIC_API_KEY });
-  let response;
+  let parsed: z.infer<typeof SummarySchema> | null;
   try {
-    response = await client.messages.parse({
-    model: MODEL,
-    max_tokens: 16_000,
-    system: SYSTEM_PROMPT,
-    thinking: { type: "adaptive" },
-    output_config: {
-      effort: "medium",
-      format: zodOutputFormat(SummarySchema),
-    },
-    messages: [
-      {
-        role: "user",
-        content: buildUserMessage({ from, to, previousFrom, previousTo, entries }),
+    const response = await client.messages.parse({
+      model: MODEL,
+      max_tokens: 16_000,
+      system: SYSTEM_PROMPT,
+      thinking: { type: "adaptive" },
+      output_config: {
+        effort: "medium",
+        format: zodOutputFormat(SummarySchema),
       },
+      messages: [
+        {
+          role: "user",
+          content: buildUserMessage({ from, to, previousFrom, previousTo, entries }),
+        },
       ],
     });
+    parsed = response.parsed_output;
   } catch (cause) {
     // A bad key, a rate limit or an outage are all things the person can act
     // on, so the message is worth passing through.
     return { ok: false, message: failureMessage(cause) };
   }
 
-  const parsed = response.parsed_output;
   if (!parsed) return { ok: false, message: "Fikk ikke et gyldig svar fra modellen" };
 
   // Persisted immediately: a summary that only lives in the page is lost on

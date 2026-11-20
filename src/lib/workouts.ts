@@ -9,10 +9,10 @@
 // "not counted" state is a whole week outside the workout's start and end,
 // which is null so a chart can leave it blank rather than draw a zero.
 
+import { addDays, isDay, startOfWeek } from "./date";
 import type { DayEntry } from "./entry";
 import { isWorkoutDone } from "./entry";
 import type { EntriesByDay } from "./trends";
-import { addDays, isDay, startOfWeek } from "./date";
 
 export type Workout = {
   /** A uuid. Written into days.data, so it can never change. */

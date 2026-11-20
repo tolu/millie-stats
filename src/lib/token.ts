@@ -12,13 +12,10 @@
 const ALGORITHM = { name: "HMAC", hash: "SHA-256" } as const;
 
 async function keyFor(secret: string): Promise<CryptoKey> {
-  return crypto.subtle.importKey(
-    "raw",
-    new TextEncoder().encode(secret),
-    ALGORITHM,
-    false,
-    ["sign", "verify"],
-  );
+  return crypto.subtle.importKey("raw", new TextEncoder().encode(secret), ALGORITHM, false, [
+    "sign",
+    "verify",
+  ]);
 }
 
 function toBase64Url(bytes: ArrayBuffer): string {

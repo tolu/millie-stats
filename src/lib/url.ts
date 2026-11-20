@@ -28,8 +28,7 @@ export function dayFromSearch(search: string, today: string = osloDay()): string
  * must land on a working page rather than a blank one.
  */
 export function routeFromSearch(search: string, today: string = osloDay()): Route {
-  const view: View =
-    new URLSearchParams(search).get("view") === "journal" ? "journal" : "day";
+  const view: View = new URLSearchParams(search).get("view") === "journal" ? "journal" : "day";
   return { view, day: dayFromSearch(search, today) };
 }
 

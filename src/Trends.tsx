@@ -1,14 +1,14 @@
 import { createMemo, createSignal, For, isPending, Loading, Show } from "solid-js";
-import { SYMPTOMS } from "./symptoms";
 import { addDays, formatShort, lastNDays, rangeDays, startOfWeek } from "./lib/date";
 import type { DayEntry } from "./lib/entry";
-import { coverage, rollingAverage, seriesFor, statsFor } from "./lib/trends";
 import type { EntriesByDay, Presence } from "./lib/trends";
-import { BASELINE_KG, formatKg, weightView } from "./lib/weight";
+import { coverage, rollingAverage, seriesFor, statsFor } from "./lib/trends";
 import type { Measurement, WeightPoint } from "./lib/weight";
-import { weeklySeries } from "./lib/workouts";
+import { BASELINE_KG, formatKg, weightView } from "./lib/weight";
 import type { WeekBar, Workout } from "./lib/workouts";
+import { weeklySeries } from "./lib/workouts";
 import { getRange, lastWeight, listWorkouts } from "./server/db";
+import { SYMPTOMS } from "./symptoms";
 
 const ROLLING_WINDOW = 7;
 
@@ -78,7 +78,7 @@ export default function Trends(props: Props) {
     >
       <div class="trends-head">
         <h2 id="trends-heading">Siste {span()} dager</h2>
-        <div class="window-toggle" role="group" aria-label="Lengde på perioden">
+        <fieldset class="window-toggle" aria-label="Lengde på perioden">
           <For each={WINDOWS}>
             {(size) => (
               <label>
@@ -92,7 +92,7 @@ export default function Trends(props: Props) {
               </label>
             )}
           </For>
-        </div>
+        </fieldset>
       </div>
 
       <Loading fallback={<p class="muted">laster trender…</p>}>
@@ -111,12 +111,8 @@ export default function Trends(props: Props) {
           <div class="heat">
             <For each={SYMPTOMS}>
               {(symptom) => {
-                const series = createMemo(() =>
-                  seriesFor(days(), entries(), symptom.id),
-                );
-                const stats = createMemo(() =>
-                  statsFor(days(), entries(), symptom.id),
-                );
+                const series = createMemo(() => seriesFor(days(), entries(), symptom.id));
+                const stats = createMemo(() => statsFor(days(), entries(), symptom.id));
                 return (
                   <>
                     <span class="heat-name">{symptom.label}</span>
@@ -159,11 +155,7 @@ export default function Trends(props: Props) {
                         {latest() === null ? "–" : `${Math.round((latest() ?? 0) * 100)}%`}
                       </strong>
                     </figcaption>
-                    <Sparkline
-                      values={rolling()}
-                      label={symptom.label}
-                      color={symptom.color}
-                    />
+                    <Sparkline values={rolling()} label={symptom.label} color={symptom.color} />
                   </figure>
                 );
               }}
@@ -230,7 +222,9 @@ function WeekBars(props: { workout: Workout; bars: WeekBar[]; endDay: string }) 
             // they would not update. `bar` itself is plain data.
             const x = () => index() * (BAR + GAP);
             if (bar === null) {
-              return <rect x={x()} y={0} width={BAR} height={H} fill="var(--heat-empty)" opacity="0.5" />;
+              return (
+                <rect x={x()} y={0} width={BAR} height={H} fill="var(--heat-empty)" opacity="0.5" />
+              );
             }
             const height = (Math.min(bar.done, bar.target) / bar.target) * H;
             const current = () => bar.weekStart === currentWeek();
@@ -246,7 +240,8 @@ function WeekBars(props: { workout: Workout; bars: WeekBar[]; endDay: string }) 
                   fill-opacity={current() ? "0.45" : "1"}
                 >
                   <title>
-                    {formatShort(bar.weekStart)}–{formatShort(addDays(bar.weekStart, 6))}: {bar.done} av {bar.target}
+                    {formatShort(bar.weekStart)}–{formatShort(addDays(bar.weekStart, 6))}:{" "}
+                    {bar.done} av {bar.target}
                   </title>
                 </rect>
               </>
@@ -265,12 +260,7 @@ function WeekBars(props: { workout: Workout; bars: WeekBar[]; endDay: string }) 
  * was logged with nothing wrong, and a nearly invisible cell is a day nobody
  * filled in. Collapsing the last two would turn gaps into good news.
  */
-function Strip(props: {
-  series: Presence[];
-  days: string[];
-  label: string;
-  color: string;
-}) {
+function Strip(props: { series: Presence[]; days: string[]; label: string; color: string }) {
   const CELL = 4;
   const GAP = 1;
   const width = createMemo(() => props.series.length * (CELL + GAP) - GAP);
@@ -292,11 +282,7 @@ function Strip(props: {
             height={CELL}
             rx={1}
             fill={
-              value === 1
-                ? props.color
-                : value === 0
-                  ? "var(--line-strong)"
-                  : "var(--heat-empty)"
+              value === 1 ? props.color : value === 0 ? "var(--line-strong)" : "var(--heat-empty)"
             }
           >
             <title>{props.days[index()]}</title>
@@ -345,9 +331,7 @@ function Sparkline(props: { values: (number | null)[]; label: string; color: str
     >
       <line x1="0" y1={H} x2={W} y2={H} class="spark-base" />
       <For each={segments()}>
-        {(points) => (
-          <polyline points={points} class="spark-line" stroke={props.color} />
-        )}
+        {(points) => <polyline points={points} class="spark-line" stroke={props.color} />}
       </For>
     </svg>
   );
@@ -360,11 +344,7 @@ function Sparkline(props: { values: (number | null)[]; label: string; color: str
  * drawn as solid points. Same instinct as the three-state symptom strip — the
  * eye must be able to tell what was observed from what was filled in.
  */
-function WeightPanel(props: {
-  days: string[];
-  entries: EntriesByDay;
-  anchor: Measurement | null;
-}) {
+function WeightPanel(props: { days: string[]; entries: EntriesByDay; anchor: Measurement | null }) {
   const view = createMemo(() => weightView(props.days, props.entries, props.anchor));
 
   // Read through memos rather than a <Show> callback, which does not re-run
@@ -413,9 +393,7 @@ function WeightChart(props: { points: WeightPoint[] }) {
   const H = 40;
 
   const bounds = createMemo(() => {
-    const values = props.points
-      .map((p) => p.kg)
-      .filter((kg): kg is number => kg !== null);
+    const values = props.points.map((p) => p.kg).filter((kg): kg is number => kg !== null);
     // The baseline is always in range: a chart of her weight that cannot show
     // normal is not telling you the thing you came for.
     let min = Math.min(...values, BASELINE_KG);
@@ -465,41 +443,35 @@ function WeightChart(props: { points: WeightPoint[] }) {
 
   return (
     <div class="weight-plot">
-    <svg
-      class="weight-svg"
-      viewBox={`0 -3 ${W} ${H + 6}`}
-      preserveAspectRatio="none"
-      role="img"
-      aria-label={`${summary()}. Stiplet referanselinje ved ${formatKg(BASELINE_KG)} kg.`}
-    >
-      <line
-        class="weight-baseline"
-        x1="0"
-        y1={y(BASELINE_KG)}
-        x2={W}
-        y2={y(BASELINE_KG)}
-      />
-      <polyline class="weight-line" points={line()} />
-      <For each={dots()}>
-        {(point) => (
-          // A zero-length line with a round cap, not a <circle>: the chart
-          // stretches to its container with preserveAspectRatio="none", which
-          // squashes a circle into an ellipse. Stroke width is immune to that
-          // under non-scaling-stroke, so the cap stays a true dot at any width.
-          <line
-            class="weight-dot"
-            x1={x(point.i)}
-            y1={y(point.kg)}
-            x2={x(point.i)}
-            y2={y(point.kg)}
-          >
-            <title>
-              {formatShort(point.day)}: {formatKg(point.kg)} kg
-            </title>
-          </line>
-        )}
-      </For>
-    </svg>
+      <svg
+        class="weight-svg"
+        viewBox={`0 -3 ${W} ${H + 6}`}
+        preserveAspectRatio="none"
+        role="img"
+        aria-label={`${summary()}. Stiplet referanselinje ved ${formatKg(BASELINE_KG)} kg.`}
+      >
+        <line class="weight-baseline" x1="0" y1={y(BASELINE_KG)} x2={W} y2={y(BASELINE_KG)} />
+        <polyline class="weight-line" points={line()} />
+        <For each={dots()}>
+          {(point) => (
+            // A zero-length line with a round cap, not a <circle>: the chart
+            // stretches to its container with preserveAspectRatio="none", which
+            // squashes a circle into an ellipse. Stroke width is immune to that
+            // under non-scaling-stroke, so the cap stays a true dot at any width.
+            <line
+              class="weight-dot"
+              x1={x(point.i)}
+              y1={y(point.kg)}
+              x2={x(point.i)}
+              y2={y(point.kg)}
+            >
+              <title>
+                {formatShort(point.day)}: {formatKg(point.kg)} kg
+              </title>
+            </line>
+          )}
+        </For>
+      </svg>
       <span class="weight-ref" style={{ "--pos": baselineOffset() }} aria-hidden="true">
         {/* "16 kg", not "16,0 kg": it is a round reference, and the gutter it
             sits in is width taken from the chart. */}

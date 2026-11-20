@@ -206,9 +206,7 @@ export async function listNotes(limit = 10, before?: string): Promise<NoteRecord
   // Bound rather than interpolated, and the SQL branches instead of binding
   // NULL — same shape as lastWeight.
   const bound =
-    before === undefined
-      ? statement.bind(size)
-      : statement.bind(size, assertDay(before, "before"));
+    before === undefined ? statement.bind(size) : statement.bind(size, assertDay(before, "before"));
   const { results } = await bound.all<Row & { has_photos: number }>();
   return results.map((row) => ({ ...toRecord(row), hasPhotos: row.has_photos === 1 }));
 }
@@ -247,8 +245,7 @@ export async function lastWeight(before?: string): Promise<Measurement | null> {
      WHERE ${where}
      ORDER BY day DESC LIMIT 1`,
   );
-  const bound =
-    before === undefined ? statement : statement.bind(assertDay(before, "before"));
+  const bound = before === undefined ? statement : statement.bind(assertDay(before, "before"));
   const row = await bound.first<{ day: string; kg: number }>();
   return row && isWeight(row.kg) ? { day: row.day, kg: row.kg } : null;
 }
@@ -308,7 +305,9 @@ export type WorkoutReply = { ok: true; workout: Workout } | { ok: false; message
  * undefined so nothing has to survive the server-function boundary as a
  * missing argument.
  */
-export async function saveWorkout(input: WorkoutInput & { id: string | null }): Promise<WorkoutReply> {
+export async function saveWorkout(
+  input: WorkoutInput & { id: string | null },
+): Promise<WorkoutReply> {
   const checked = validateWorkout(input);
   if (!checked.ok) return checked;
   const { name, description, perWeek, startDay } = checked.value;

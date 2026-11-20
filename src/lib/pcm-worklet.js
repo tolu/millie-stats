@@ -25,7 +25,7 @@ class PcmCapture extends AudioWorkletProcessor {
   }
 
   process(inputs) {
-    const channel = inputs[0] && inputs[0][0];
+    const channel = inputs[0]?.[0];
     if (channel) {
       for (let i = 0; i < channel.length; i++) {
         this.batch[this.filled++] = channel[i];

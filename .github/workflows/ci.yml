@@ -1,0 +1,37 @@
+# Everything a change must pass before it reaches main. Deploys stay manual
+# (`npm run deploy`, see CLAUDE.md); this only checks.
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      # Pinned to commits, not tags: a moved tag would run new code here
+      # without a diff in this repository.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      # Lint, format and import order in one pass, annotated on the diff.
+      - run: npx biome ci .
+      - run: npx tsc --noEmit
+      - run: npm test
+      # The build is a check of its own: the client must build before the
+      # server bundle, or the shell bakes in a stale asset hash (see
+      # buildClientFirst in vite.config.ts).
+      - run: npm run build

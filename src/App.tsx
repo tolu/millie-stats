@@ -5,6 +5,8 @@ import Footer from "./Footer";
 import Journal from "./Journal";
 import Login from "./Login";
 import { osloDay } from "./lib/date";
+import { errorMessage, isStaleBuild, UNSAVED_WORK } from "./lib/staleBuild";
+import { sameBuild } from "./server/build";
 import { routeFromSearch, searchForRoute } from "./lib/url";
 import type { Route } from "./lib/url";
 
@@ -77,6 +79,23 @@ function SignedIn() {
     return () => removeEventListener("popstate", onPop);
   });
 
+  // A deploy strands a tab left open: every call it makes is refused (see
+  // lib/staleBuild). Coming back to the tab is when that happens on the phone,
+  // so check then and reload before the first tap is made against the old
+  // build — unless the page holds something a reload would throw away. A
+  // note typed just before leaving is already on its way: Day flushes on hide.
+  onSettled(() => {
+    const onVisible = () => {
+      if (document.visibilityState !== "visible") return;
+      if (document.querySelector(UNSAVED_WORK)) return;
+      sameBuild().catch((cause: unknown) => {
+        if (isStaleBuild(cause) && !document.querySelector(UNSAVED_WORK)) location.reload();
+      });
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => document.removeEventListener("visibilitychange", onVisible);
+  });
+
   /**
    * A change of page pushes; moving between days replaces.
    *
@@ -118,18 +137,19 @@ function SignedIn() {
 }
 
 function Failure(props: { error: unknown; reset: () => void }) {
-  const message = createMemo(() => {
+  const cause = createMemo(() => {
     const raw = props.error;
-    const value = typeof raw === "function" ? (raw as () => unknown)() : raw;
-    return value instanceof Error ? value.message : String(value);
+    return typeof raw === "function" ? (raw as () => unknown)() : raw;
   });
+  // Trying again cannot help a page older than the worker; only a reload can.
+  const stale = () => isStaleBuild(cause());
 
   return (
     <div class="failure" role="alert">
       <h2>Noe gikk galt</h2>
-      <p class="muted">{message()}</p>
-      <button type="button" onClick={() => props.reset()}>
-        Prøv igjen
+      <p class="muted">{errorMessage(cause())}</p>
+      <button type="button" onClick={() => (stale() ? location.reload() : props.reset())}>
+        {stale() ? "Last inn på nytt" : "Prøv igjen"}
       </button>
     </div>
   );

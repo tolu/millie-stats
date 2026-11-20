@@ -87,9 +87,12 @@ enters it.
 - **`Day` reads `props.day`; it must never copy it into a signal.** `<Match>`
   keeps the component mounted while the day changes, so a copy taken at mount
   goes stale.
-- **`Day` flushes its pending note on disposal, not just on navigation.**
-  Typing and immediately leaving otherwise discards the write with no request,
-  no error and no trace.
+- **`Day` flushes its pending note on disposal and when the tab is hidden,
+  not just on navigation.** Typing and immediately leaving otherwise discards
+  the write with no request, no error and no trace. The debounce
+  (`lib/debounce.ts`) holds the save it will queue and a flush queues that:
+  reading the draft back instead got the value from before a keystroke in the
+  same tick and cancelled the timer holding the right one.
 - **The page swap is not wrapped in `startViewTransition`.** It would capture
   the incoming page's empty state and crossfade into "laster…". Keep the
   transition where it is, around day-to-day changes.
@@ -207,6 +210,15 @@ enters it.
   not propagate error messages to the client, so a throw reaches the UI as
   "Internal Server Error". Return `{ ok: false, message }` for anything the
   user can act on; let genuine faults throw.
+- **A deploy strands a tab left open.** `@solidjs/vite-plugin` stamps every
+  server-function call with a build id that is random per build, and a worker
+  from another build answers 409 without running the function. `SignedIn`
+  asks `sameBuild()` whenever the tab becomes visible and reloads on a stale
+  answer — unless `UNSAVED_WORK` in `lib/staleBuild.ts` matches: an open
+  dialog, or a save that has not landed. A new place that holds input a
+  reload would lose belongs in that selector. Reproduce it with `npm run
+  build` and a restart of the `worker` preview; `wrangler dev`'s own reload
+  swaps the assets but keeps running the old server code.
 
 ### Dictation
 

@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { createWriteQueue } from "./writeQueue";
 import type { WriteState } from "./writeQueue";
+import { STALE_BUILD_MESSAGE } from "./staleBuild";
 
 // These assertions are about ordering, not latency, so every waitFor gets a
 // generous timeout: the default 1s can be missed on a loaded machine and turn
@@ -75,6 +76,22 @@ describe("createWriteQueue", () => {
     );
     queue.push("x");
     await vi.waitFor(() => expect(captured).toBe("D1 unavailable"), { timeout: 5000 });
+  });
+
+  it("says to reload when a deploy left the page behind", async () => {
+    let captured = "";
+    const queue = createWriteQueue<string>(
+      async () => {
+        throw Object.assign(new Error("Server function is not part of the deployment"), {
+          unknownFunction: true,
+        });
+      },
+      (state, error) => {
+        if (state === "error") captured = error ?? "";
+      },
+    );
+    queue.push("x");
+    await vi.waitFor(() => expect(captured).toBe(STALE_BUILD_MESSAGE), { timeout: 5000 });
   });
 
   it("still writes after detach — switching day must not discard typed input", async () => {

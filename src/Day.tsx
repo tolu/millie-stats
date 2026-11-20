@@ -14,6 +14,7 @@ import { addDays, formatLong } from "./lib/date";
 import { EMPTY_ENTRY, isFlagged, withFlag, withNote, withWeight, withWorkout } from "./lib/entry";
 import type { DayEntry } from "./lib/entry";
 import { appendToNote } from "./lib/transcript";
+import { createDebounced } from "./lib/debounce";
 import { createWriteQueue } from "./lib/writeQueue";
 import type { WriteState } from "./lib/writeQueue";
 import Dictate from "./Dictate";
@@ -86,19 +87,12 @@ export default function Day(props: {
     onFlush(() => setDataVersion((n) => n + 1));
   }
 
-  /** Flushes whatever is pending for the day being left. */
-  function flushPending() {
-    clearTimeout(noteTimer);
-    const pending = draft();
-    if (pending && pending.day === day()) queue.push(pending);
-  }
-
   function goTo(next: string) {
     if (next > today()) return;
     const move = () => {
       // A pending note save belongs to the day being left, so flush it before
       // the queue is reset - otherwise navigating away loses what was typed.
-      flushPending();
+      note.flush();
       queue.detach();
       setDraft(null);
       setStatus("idle");
@@ -113,18 +107,30 @@ export default function Day(props: {
 
   function toJournal() {
     // Leaving the page unmounts this component, so the same flush applies.
-    flushPending();
+    note.flush();
     props.onJournal();
   }
 
   let micButton: HTMLButtonElement | undefined;
 
-  let noteTimer: ReturnType<typeof setTimeout> | undefined;
   // Flushes on disposal rather than discarding. Until this page could unmount,
   // clearing the timer was harmless because the debounce always got to fire.
   // Now, typing a note and immediately leaving the page would throw the write
   // away silently — no request issued, no error, the text simply gone.
-  onSettled(() => () => flushPending());
+  //
+  // And when the tab is put away, so a note typed just before locking the
+  // phone is not still in the debounce when App reloads the page on return
+  // after a deploy. Only then: a save on every switch of app would be noise.
+  onSettled(() => {
+    const onHide = () => {
+      if (document.visibilityState === "hidden") note.flush();
+    };
+    document.addEventListener("visibilitychange", onHide);
+    return () => {
+      document.removeEventListener("visibilitychange", onHide);
+      note.flush();
+    };
+  });
 
   // Writes are queued rather than fired in parallel: every save carries the
   // whole day, so a slow one landing after a fast one would reinstate stale
@@ -136,6 +142,14 @@ export default function Day(props: {
       setError(message ?? "");
       if (state === "saved") chartsStale();
     },
+  );
+
+  // A typed note waits out the debounce here, holding the exact save it will
+  // queue — flushed early, it queues that, never the draft read back (see
+  // lib/debounce). Any discrete act cancels it: that save carries the note.
+  const note = createDebounced<{ day: string; entry: DayEntry }>(
+    (pending) => queue.push(pending),
+    NOTE_DEBOUNCE_MS,
   );
 
   /**
@@ -162,7 +176,7 @@ export default function Day(props: {
 
   function toggle(symptomId: string, on: boolean) {
     const next = edit((current) => withFlag(current, symptomId, on));
-    clearTimeout(noteTimer);
+    note.cancel();
     queue.push({ day: day(), entry: next });
   }
 
@@ -170,29 +184,27 @@ export default function Day(props: {
   // rather than being debounced like typing.
   function editWeight(kg: number | null) {
     const next = edit((current) => withWeight(current, kg));
-    clearTimeout(noteTimer);
+    note.cancel();
     queue.push({ day: day(), entry: next });
   }
 
   // A tick, like a checkbox: saved at once, carrying whatever note is pending.
   function toggleWorkout(workoutId: string, done: boolean) {
     const next = edit((current) => withWorkout(current, workoutId, done));
-    clearTimeout(noteTimer);
+    note.cancel();
     queue.push({ day: day(), entry: next });
   }
 
-  function editNote(note: string) {
-    const next = edit((current) => withNote(current, note));
-    const target = day();
-    clearTimeout(noteTimer);
-    noteTimer = setTimeout(() => queue.push({ day: target, entry: next }), NOTE_DEBOUNCE_MS);
+  function editNote(text: string) {
+    const next = edit((current) => withNote(current, text));
+    note.schedule({ day: day(), entry: next });
   }
 
   // Like a tick, a finished dictation is a discrete act: saved at once,
   // appended on a new line, never over what is already there.
   function appendDictation(text: string) {
     const next = edit((current) => withNote(current, appendToNote(current.note, text)));
-    clearTimeout(noteTimer);
+    note.cancel();
     queue.push({ day: day(), entry: next });
   }
 

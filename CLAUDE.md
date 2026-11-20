@@ -1,6 +1,6 @@
 # Working on this repo
 
-A private symptom journal for Millie, a border collie. Solid 2 RC on Cloudflare
+A private symptom journal for Millie, a border collie. Solid 2 on Cloudflare
 Workers with D1, plus vet-facing summaries from Claude. See README.md for what
 it is and why; this file is what you need to change it safely.
 
@@ -37,27 +37,29 @@ npm run dev:worker   # the BUILT worker under wrangler dev
 npm run deploy       # build + deploy; the only way this app is deployed
 ```
 
-**Changing a server module means restarting the dev server.** Vite hot-reloads
-the client, but the workerd side keeps the old bundle, so edits to `db.ts`,
-`entry.ts` or anything else a server function imports keep running the previous
-version. It fails silently and looks exactly like a logic bug — a new field
-simply never arrives on the client.
+Server modules reload without a restart since `@solidjs/vite-plugin` 3.0 —
+an edit to `db.ts` reaches the next call. Before it, workerd kept the old
+bundle and a new field simply never arrived; if that symptom comes back,
+restart before debugging the logic. A change to `wrangler.jsonc` still needs
+one.
 
 Never start a dev server with Bash — use the browser-preview tooling
-(`.claude/launch.json` defines the `dev` config). Verify UI changes by driving
-the page and reading the DOM, not by asking the user to look.
+(`.claude/launch.json` defines `dev`, and `worker` for the built worker on
+8787). Verify UI changes by driving the page and reading the DOM, not by asking
+the user to look.
 
-## Solid 2 RC — assume your training is wrong here
+## Solid 2 — assume your training is wrong here
 
-Solid 2 is a release candidate and its API differs from every Solid 1 example
-you have seen. These all cost real debugging time already:
+Solid 2's API differs from every Solid 1 example you have seen, and most
+writing about it describes a release candidate. These all cost real debugging
+time already:
 
 | Habit | Reality in Solid 2 |
 |---|---|
 | `createResource` | Gone. A `createMemo` returning a promise suspends downstream. |
 | `createEffect(fn)` | Needs **two** args: `createEffect(compute, effect)`. One arg is a type error since rc.6, so `tsc` catches it before the page does. |
 | `<Suspense>` / `<ErrorBoundary>` | `<Loading>` / `<Errored>` |
-| `classList={{ a: cond }}` | Removed. Compute the class string. |
+| `classList={{ a: cond }}` | A compile error. `class` takes an object or array: `class={["a", { b: cond }]}`. |
 | `aria-expanded={bool}` | Must be a string: `cond ? "true" : "false"` |
 | JSX types from `solid-js` | `jsxImportSource: "@solidjs/web"`; `JSX` type comes from `@solidjs/web` |
 | Nested `<Show>` narrowing | Its callback does not re-run while the outer condition stays truthy. Use `<Switch>`/`<Match>` for multi-state views. |
@@ -85,9 +87,12 @@ enters it.
 - **`Day` reads `props.day`; it must never copy it into a signal.** `<Match>`
   keeps the component mounted while the day changes, so a copy taken at mount
   goes stale.
-- **`Day` flushes its pending note on disposal, not just on navigation.**
-  Typing and immediately leaving otherwise discards the write with no request,
-  no error and no trace.
+- **`Day` flushes its pending note on disposal and when the tab is hidden,
+  not just on navigation.** Typing and immediately leaving otherwise discards
+  the write with no request, no error and no trace. The debounce
+  (`lib/debounce.ts`) holds the save it will queue and a flush queues that:
+  reading the draft back instead got the value from before a keystroke in the
+  same tick and cancelled the timer holding the right one.
 - **The page swap is not wrapped in `startViewTransition`.** It would capture
   the incoming page's empty state and crossfade into "laster…". Keep the
   transition where it is, around day-to-day changes.
@@ -142,9 +147,11 @@ enters it.
   fallback shows until the first value and never again. After that, a memo
   going pending keeps the old content on screen, and every write in the batch
   that started the fetch stays invisible until the data lands, including
-  writes that have nothing to do with it. Measured on rc.14 with delayed
-  requests: a change of day froze the label for the whole fetch, and "lagret"
-  waited for the trends.
+  writes that have nothing to do with it. Measured on rc.14 and again on
+  2.0.3 with delayed requests: a change of day froze the label for the whole
+  fetch, and "lagret" waited for the trends. Solid's dev console reports such
+  holds as `LONG_HOLD`; the one on a change of day is the design below, not a
+  bug.
 - **So a wait has to be shown on purpose.** `latest(x)` is where a held value
   is heading, `isPending(x)` is whether one is on the way. The date nav reads
   `latest` so a tap answers at once and a second tap counts from the day asked
@@ -152,9 +159,11 @@ enters it.
   the new label would be saved to the old day.
 - **A write that starts a fetch gets a batch of its own.** Anything written
   in the same tick is held with it, before or after. `chartsStale` in
-  `Day.tsx` is the one place the charts are told to refetch, and it defers
-  and flushes first for that reason; bump the counter anywhere else and
-  "lagret", or the upload button, waits for the trends again. The same goes
+  `Day.tsx` is the one place the charts are told to refetch, and it bumps the
+  counter in `onFlush` for that reason; bump it anywhere else and "lagret", or
+  the upload button, waits for the trends again. `createDeferred` would remove
+  the hold but not this rule's cost: the 30/90 toggle then draws the new span
+  over the old rows, every extra day as unlogged. The same goes
   before calling an `action`: a write made in the tick it starts is adopted
   by it and shows only when it ends, so `flush()` first.
 - **Lists are the server's; after a change they are read again.**
@@ -201,6 +210,15 @@ enters it.
   not propagate error messages to the client, so a throw reaches the UI as
   "Internal Server Error". Return `{ ok: false, message }` for anything the
   user can act on; let genuine faults throw.
+- **A deploy strands a tab left open.** `@solidjs/vite-plugin` stamps every
+  server-function call with a build id that is random per build, and a worker
+  from another build answers 409 without running the function. `SignedIn`
+  asks `sameBuild()` whenever the tab becomes visible and reloads on a stale
+  answer — unless `UNSAVED_WORK` in `lib/staleBuild.ts` matches: an open
+  dialog, or a save that has not landed. A new place that holds input a
+  reload would lose belongs in that selector. Reproduce it with `npm run
+  build` and a restart of the `worker` preview; `wrangler dev`'s own reload
+  swaps the assets but keeps running the old server code.
 
 ### Dictation
 

@@ -6,6 +6,8 @@
 // last-write-wins is only safe when "last" means last-issued, not
 // last-to-return. Queueing gives us that.
 
+import { errorMessage } from "./staleBuild";
+
 export type WriteState = "idle" | "saving" | "saved" | "error";
 
 export type WriteQueue<T> = {
@@ -42,7 +44,7 @@ export function createWriteQueue<T>(
         })
         .catch((cause: unknown) => {
           if (era !== generation) return;
-          onState("error", cause instanceof Error ? cause.message : String(cause));
+          onState("error", errorMessage(cause));
         })
         .finally(() => {
           inFlight--;

@@ -1,4 +1,4 @@
-/// <reference types="@solidjs/vite-plugin/virtual-solid-manifest" />
+/// <reference types="@solidjs/vite-plugin/virtual-modules" />
 // The Cloudflare-side entry.
 //
 // Solid's start mode hands server-function dispatch to us

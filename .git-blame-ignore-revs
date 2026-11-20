@@ -1,0 +1,5 @@
+# Mechanical reformatting, skipped by `git blame` (GitHub reads this file
+# itself; locally: git config blame.ignoreRevsFile .git-blame-ignore-revs).
+
+# format the codebase with Biome
+00b4f0c32e34d3046938eb5e97a909a8c59d591d

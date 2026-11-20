@@ -8,6 +8,8 @@
     "preview": "vite preview",
     "dev:worker": "wrangler dev --config dist/server/wrangler.json --persist-to .wrangler/state",
     "test": "vitest run",
+    "check": "biome check .",
+    "fix": "biome check --write .",
     "deploy": "npm run build && wrangler deploy",
     "db:local": "wrangler d1 execute millie --local --file",
     "db:remote": "wrangler d1 execute millie --remote --file"

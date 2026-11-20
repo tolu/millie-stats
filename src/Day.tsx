@@ -1,11 +1,11 @@
 import {
   createMemo,
   createSignal,
-  flush,
   For,
   isPending,
   latest,
   Loading,
+  onFlush,
   onSettled,
   untrack,
 } from "solid-js";
@@ -73,14 +73,17 @@ export default function Day(props: {
    * Writes in one batch land together, and a batch that starts a fetch lands
    * when the fetch does. Bumped inline, the counter took whatever was written
    * in the same tick with it: "lagret" waited for the trends, and so did the
-   * upload button coming back. Deferred, so writes the caller makes after
-   * this call are committed first too.
+   * upload button coming back. `onFlush` runs after the pending flush, so
+   * writes the caller makes after this call are committed first too.
+   * (`queueMicrotask` is not a substitute: queued before the tick's first
+   * write, it runs before that flush and its write joins it.)
+   *
+   * Not `createDeferred` in Trends, which would make this an inline bump: it
+   * lets the 30/90 toggle show the new span over the old rows, drawing every
+   * day outside the old window as unlogged until the fetch lands.
    */
   function chartsStale() {
-    queueMicrotask(() => {
-      flush();
-      setDataVersion((n) => n + 1);
-    });
+    onFlush(() => setDataVersion((n) => n + 1));
   }
 
   /** Flushes whatever is pending for the day being left. */

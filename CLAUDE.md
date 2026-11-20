@@ -144,9 +144,11 @@ enters it.
   fallback shows until the first value and never again. After that, a memo
   going pending keeps the old content on screen, and every write in the batch
   that started the fetch stays invisible until the data lands, including
-  writes that have nothing to do with it. Measured on rc.14 with delayed
-  requests: a change of day froze the label for the whole fetch, and "lagret"
-  waited for the trends.
+  writes that have nothing to do with it. Measured on rc.14 and again on
+  2.0.3 with delayed requests: a change of day froze the label for the whole
+  fetch, and "lagret" waited for the trends. Solid's dev console reports such
+  holds as `LONG_HOLD`; the one on a change of day is the design below, not a
+  bug.
 - **So a wait has to be shown on purpose.** `latest(x)` is where a held value
   is heading, `isPending(x)` is whether one is on the way. The date nav reads
   `latest` so a tap answers at once and a second tap counts from the day asked
@@ -154,9 +156,11 @@ enters it.
   the new label would be saved to the old day.
 - **A write that starts a fetch gets a batch of its own.** Anything written
   in the same tick is held with it, before or after. `chartsStale` in
-  `Day.tsx` is the one place the charts are told to refetch, and it defers
-  and flushes first for that reason; bump the counter anywhere else and
-  "lagret", or the upload button, waits for the trends again. The same goes
+  `Day.tsx` is the one place the charts are told to refetch, and it bumps the
+  counter in `onFlush` for that reason; bump it anywhere else and "lagret", or
+  the upload button, waits for the trends again. `createDeferred` would remove
+  the hold but not this rule's cost: the 30/90 toggle then draws the new span
+  over the old rows, every extra day as unlogged. The same goes
   before calling an `action`: a write made in the tick it starts is adopted
   by it and shows only when it ends, so `flush()` first.
 - **Lists are the server's; after a change they are read again.**

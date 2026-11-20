@@ -9,6 +9,7 @@ import { parseEntry } from "../lib/entry";
 import { coverage } from "../lib/trends";
 import { buildUserMessage, SYSTEM_PROMPT } from "./prompt";
 import { saveSummary } from "./db";
+import { failureMessage } from "./failure";
 import type { SummaryRecord } from "./db";
 
 // Sonnet 5 over Opus 5: this is "read a table, notice a trend, write two
@@ -113,10 +114,7 @@ export async function summarise(from: string, to: string): Promise<SummaryResult
   } catch (cause) {
     // A bad key, a rate limit or an outage are all things the person can act
     // on, so the message is worth passing through.
-    return {
-      ok: false,
-      message: cause instanceof Error ? cause.message : String(cause),
-    };
+    return { ok: false, message: failureMessage(cause) };
   }
 
   const parsed = response.parsed_output;

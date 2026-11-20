@@ -10,8 +10,8 @@ import {
   lastNDays,
   osloDay,
   rangeDays,
-  toEpochDay,
   startOfWeek,
+  toEpochDay,
   weekdayIndex,
 } from "./date";
 
@@ -100,11 +100,7 @@ describe("ranges", () => {
   });
 
   it("counts back N days inclusive of the end day", () => {
-    expect(lastNDays("2026-08-26", 3)).toEqual([
-      "2026-08-24",
-      "2026-08-25",
-      "2026-08-26",
-    ]);
+    expect(lastNDays("2026-08-26", 3)).toEqual(["2026-08-24", "2026-08-25", "2026-08-26"]);
     expect(lastNDays("2026-08-26", 1)).toEqual(["2026-08-26"]);
     expect(lastNDays("2026-08-26", 0)).toEqual([]);
     expect(lastNDays("2026-08-26", 90)).toHaveLength(90);

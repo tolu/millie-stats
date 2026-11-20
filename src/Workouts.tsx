@@ -1,9 +1,16 @@
-import { createMemo, createSignal, flush, For, refresh, Show } from "solid-js";
-import { addDays, formatLong, formatShort, formatWeekday, rangeDays, startOfWeek } from "./lib/date";
-import { isWorkoutDone } from "./lib/entry";
+import { createMemo, createSignal, For, flush, refresh, Show } from "solid-js";
+import {
+  addDays,
+  formatLong,
+  formatShort,
+  formatWeekday,
+  rangeDays,
+  startOfWeek,
+} from "./lib/date";
 import type { DayEntry } from "./lib/entry";
-import { isActiveOn, MAX_PER_WEEK, weekProgress } from "./lib/workouts";
+import { isWorkoutDone } from "./lib/entry";
 import type { Workout } from "./lib/workouts";
+import { isActiveOn, MAX_PER_WEEK, weekProgress } from "./lib/workouts";
 import { getRange, listWorkouts, retireWorkout, saveWorkout } from "./server/db";
 
 /**

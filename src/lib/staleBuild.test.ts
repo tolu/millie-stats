@@ -18,7 +18,11 @@ describe("isStaleBuild", () => {
   });
 
   it("does not take an ordinary failure for one", () => {
-    expect(isStaleBuild(Object.assign(new Error("Server function call failed with status 500"), { status: 500 }))).toBe(false);
+    expect(
+      isStaleBuild(
+        Object.assign(new Error("Server function call failed with status 500"), { status: 500 }),
+      ),
+    ).toBe(false);
     expect(isStaleBuild(new Error("Failed to fetch"))).toBe(false);
     expect(isStaleBuild({ unknownFunction: true })).toBe(false);
     expect(isStaleBuild(undefined)).toBe(false);

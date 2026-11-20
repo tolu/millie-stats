@@ -3,10 +3,10 @@ import {
   EMPTY_ENTRY,
   isBlank,
   isFlagged,
+  isWorkoutDone,
   parseEntry,
   serializeEntry,
   withFlag,
-  isWorkoutDone,
   withNote,
   withWeight,
   withWorkout,
@@ -163,13 +163,17 @@ describe("workouts", () => {
       const parsed = parseEntry(`{"flags":{},"note":"","workouts":${bad}}`);
       expect(parsed.workouts).toBeUndefined();
     }
-    expect(parseEntry(`{"flags":{},"note":"","workouts":{"${id}":true,"junk":"yes"}}`).workouts)
-      .toEqual({ [id]: true });
+    expect(
+      parseEntry(`{"flags":{},"note":"","workouts":{"${id}":true,"junk":"yes"}}`).workouts,
+    ).toEqual({ [id]: true });
   });
 
   it("lists the ids done that day", () => {
     expect(workoutsDone(EMPTY_ENTRY)).toEqual([]);
-    expect(workoutsDone(withWorkout(withWorkout(EMPTY_ENTRY, "a", true), "b", true))).toEqual(["a", "b"]);
+    expect(workoutsDone(withWorkout(withWorkout(EMPTY_ENTRY, "a", true), "b", true))).toEqual([
+      "a",
+      "b",
+    ]);
   });
 
   it("counts a tick as information, so the day is not blank", () => {

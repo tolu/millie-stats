@@ -16,8 +16,9 @@
 //
 // The manifest import is a side effect on purpose: without it, functions only
 // referenced from client code never register.
-import { handleRequest } from "virtual:solid-ssr-handler";
+
 import { handleServerFunctionRequest } from "virtual:solid-server-function-handler";
+import { handleRequest } from "virtual:solid-ssr-handler";
 import "virtual:solid-server-function-manifest";
 import { createToken, readCookie, verifyToken } from "./lib/token";
 import { handlePhotoRequest } from "./server/photoRoutes";
@@ -98,8 +99,7 @@ export default {
     if (url.pathname === "/_auth") {
       return json({
         authorised: await isAuthorised(request, env),
-        configured: Boolean(env.APP_PASSPHRASE && env.COOKIE_SECRET) ||
-          env.DEV_BYPASS_AUTH === "1",
+        configured: Boolean(env.APP_PASSPHRASE && env.COOKIE_SECRET) || env.DEV_BYPASS_AUTH === "1",
       });
     }
 

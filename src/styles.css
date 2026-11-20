@@ -149,7 +149,6 @@ main[aria-busy="true"],
   color: var(--ink-dim);
 }
 
-
 /* ---------- date navigation ---------- */
 
 .datenav {
@@ -400,14 +399,15 @@ main[aria-busy="true"],
   /* Anchored to its own info button, flipping above when there is no room
      below. Without anchor positioning support it centres, which is fine. */
   position-area: block-end span-inline-start;
-  position-try-fallbacks: block-start span-inline-start, block-end span-inline-end;
+  position-try-fallbacks:
+    block-start span-inline-start,
+    block-end span-inline-end;
   margin-block: 0.35rem;
 
   & strong {
     color: var(--ink);
   }
 }
-
 
 /* ---------- workouts ---------- */
 
@@ -652,7 +652,6 @@ main[aria-busy="true"],
     color: var(--danger);
   }
 }
-
 
 /* Day changes crossfade rather than snapping. */
 @view-transition {

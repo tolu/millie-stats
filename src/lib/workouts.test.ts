@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { EMPTY_ENTRY, withWorkout } from "./entry";
-import type { DayEntry } from "./entry";
-import { isActiveOn, validateWorkout, weekProgress, weeklySeries } from "./workouts";
-import type { Workout } from "./workouts";
 import { rangeDays } from "./date";
+import type { DayEntry } from "./entry";
+import { EMPTY_ENTRY, withWorkout } from "./entry";
+import type { Workout } from "./workouts";
+import { isActiveOn, validateWorkout, weeklySeries, weekProgress } from "./workouts";
 
 const RYGG: Workout = {
   id: "rygg",
@@ -100,7 +100,12 @@ describe("weeklySeries", () => {
 });
 
 describe("validateWorkout", () => {
-  const good = { name: " Ryggøvelser ", description: "Sitt–stå", perWeek: 3, startDay: "2026-09-09" };
+  const good = {
+    name: " Ryggøvelser ",
+    description: "Sitt–stå",
+    perWeek: 3,
+    startDay: "2026-09-09",
+  };
 
   it("normalises a good input", () => {
     expect(validateWorkout(good)).toEqual({
@@ -117,6 +122,9 @@ describe("validateWorkout", () => {
     for (const perWeek of [0, 8, 2.5, Number.NaN]) {
       expect(bad({ perWeek })).toEqual({ ok: false, message: expect.stringContaining("1 til 7") });
     }
-    expect(bad({ startDay: "2026-02-31" })).toEqual({ ok: false, message: expect.stringContaining("dato") });
+    expect(bad({ startDay: "2026-02-31" })).toEqual({
+      ok: false,
+      message: expect.stringContaining("dato"),
+    });
   });
 });

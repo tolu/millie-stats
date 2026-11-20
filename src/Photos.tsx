@@ -3,18 +3,18 @@ import {
   createMemo,
   createOptimisticStore,
   createSignal,
-  flush,
   For,
+  flush,
   Loading,
   refresh,
   Show,
 } from "solid-js";
 import { formatLong } from "./lib/date";
+import type { PreparedPhoto } from "./lib/image";
 import { isAcceptableImage, prepare } from "./lib/image";
 import { MAX_PHOTOS_PER_DAY, MAX_UPLOAD_BYTES, photoUrl } from "./lib/photo";
 import { photosForDay } from "./server/db";
 import type { PhotoRecord } from "./server/photos";
-import type { PreparedPhoto } from "./lib/image";
 
 type UploadReply = { ok?: boolean; message?: string; photo?: PhotoRecord };
 
@@ -173,16 +173,9 @@ export default function Photos(props: {
       <div class="photo-actions">
         <Show
           when={!full()}
-          fallback={
-            <p class="muted">{MAX_PHOTOS_PER_DAY} bilder — det er maks for én dag.</p>
-          }
+          fallback={<p class="muted">{MAX_PHOTOS_PER_DAY} bilder — det er maks for én dag.</p>}
         >
-          <button
-            type="button"
-            class="add-photo"
-            disabled={busy()}
-            onClick={() => picker.click()}
-          >
+          <button type="button" class="add-photo" disabled={busy()} onClick={() => picker.click()}>
             {busy() ? "Laster opp…" : "Legg til bilde"}
           </button>
         </Show>

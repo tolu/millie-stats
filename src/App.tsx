@@ -6,9 +6,9 @@ import Journal from "./Journal";
 import Login from "./Login";
 import { osloDay } from "./lib/date";
 import { errorMessage, isStaleBuild, UNSAVED_WORK } from "./lib/staleBuild";
-import { sameBuild } from "./server/build";
-import { routeFromSearch, searchForRoute } from "./lib/url";
 import type { Route } from "./lib/url";
+import { routeFromSearch, searchForRoute } from "./lib/url";
+import { sameBuild } from "./server/build";
 
 type AuthState = { authorised: boolean; configured: boolean };
 

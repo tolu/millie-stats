@@ -10,7 +10,9 @@
 
 /** Whether a failed server-function call came from a page older than the worker. */
 export function isStaleBuild(cause: unknown): boolean {
-  return cause instanceof Error && (cause as { unknownFunction?: unknown }).unknownFunction === true;
+  return (
+    cause instanceof Error && (cause as { unknownFunction?: unknown }).unknownFunction === true
+  );
 }
 
 export const STALE_BUILD_MESSAGE = "Appen er oppdatert. Last inn siden på nytt.";

@@ -77,10 +77,7 @@ export default function Summaries(props: { endDay: string }) {
       </Show>
 
       <Loading fallback={<p class="muted">laster…</p>}>
-        <Show
-          when={all().length > 0}
-          fallback={<p class="muted">Ingen oppsummeringer ennå.</p>}
-        >
+        <Show when={all().length > 0} fallback={<p class="muted">Ingen oppsummeringer ennå.</p>}>
           <ul class="summary-list">
             <For each={all()}>
               {(summary) => (

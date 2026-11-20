@@ -4,8 +4,8 @@ import {
   EMPTY_TRANSCRIPT,
   parseServerMessage,
   reduceTranscript,
-  transcriptText,
   type ServerEvent,
+  transcriptText,
 } from "./transcript";
 
 const json = (value: unknown) => JSON.stringify(value);
@@ -23,7 +23,9 @@ describe("parseServerMessage", () => {
       parseServerMessage(json({ serverContent: { interimInputTranscription: { text: "I dag" } } })),
     ).toEqual([{ kind: "interim", text: "I dag" }]);
     expect(
-      parseServerMessage(json({ serverContent: { inputTranscription: { text: "I dag gikk vi." } } })),
+      parseServerMessage(
+        json({ serverContent: { inputTranscription: { text: "I dag gikk vi." } } }),
+      ),
     ).toEqual([{ kind: "final", text: "I dag gikk vi." }]);
     expect(parseServerMessage(json({ serverContent: { generationComplete: true } }))).toEqual([
       { kind: "complete" },
@@ -33,7 +35,9 @@ describe("parseServerMessage", () => {
   it("reads every event in a message that carries more than one", () => {
     expect(
       parseServerMessage(
-        json({ serverContent: { inputTranscription: { text: "Ferdig." }, generationComplete: true } }),
+        json({
+          serverContent: { inputTranscription: { text: "Ferdig." }, generationComplete: true },
+        }),
       ),
     ).toEqual([{ kind: "final", text: "Ferdig." }, { kind: "complete" }]);
   });
@@ -80,9 +84,12 @@ describe("reduceTranscript", () => {
   it("knows whether a final is still owed", () => {
     expect(run([]).open).toBe(false);
     expect(run([{ kind: "activityStart" }]).open).toBe(true);
-    expect(run([{ kind: "final", text: "Lang tur." }, { kind: "interim", text: "Hun" }]).open).toBe(
-      true,
-    );
+    expect(
+      run([
+        { kind: "final", text: "Lang tur." },
+        { kind: "interim", text: "Hun" },
+      ]).open,
+    ).toBe(true);
   });
 
   // Regression: a pause before release closes the last turn by itself. Treating

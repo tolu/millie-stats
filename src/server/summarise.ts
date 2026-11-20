@@ -7,10 +7,10 @@ import { addDays, diffDays, isDay } from "../lib/date";
 import type { DayEntry } from "../lib/entry";
 import { parseEntry } from "../lib/entry";
 import { coverage } from "../lib/trends";
-import { buildUserMessage, SYSTEM_PROMPT } from "./prompt";
+import type { SummaryRecord } from "./db";
 import { saveSummary } from "./db";
 import { failureMessage } from "./failure";
-import type { SummaryRecord } from "./db";
+import { buildUserMessage, SYSTEM_PROMPT } from "./prompt";
 
 // Sonnet 5 over Opus 5: this is "read a table, notice a trend, write two
 // paragraphs", which is squarely its strength. 2.5x cheaper and noticeably
@@ -26,9 +26,7 @@ const SummarySchema = z.object({
   brief: z
     .string()
     .describe("Klinisk oppsummering til veterinæren, på norsk. Tett, faktisk, datert."),
-  recap: z
-    .string()
-    .describe("Kort, varmt avsnitt på hverdagsnorsk til eieren. Ingen fagspråk."),
+  recap: z.string().describe("Kort, varmt avsnitt på hverdagsnorsk til eieren. Ingen fagspråk."),
 });
 
 async function bindings() {
@@ -40,10 +38,7 @@ async function bindings() {
  * Reads a period plus the equal-length one before it in a single query, so the
  * model can describe change rather than just state.
  */
-async function loadEntries(
-  from: string,
-  to: string,
-): Promise<Map<string, DayEntry>> {
+async function loadEntries(from: string, to: string): Promise<Map<string, DayEntry>> {
   const { DB } = await bindings();
   const { results } = await DB.prepare(
     `SELECT day, data FROM days WHERE day >= ?1 AND day <= ?2 ORDER BY day ASC`,
@@ -96,19 +91,19 @@ export async function summarise(from: string, to: string): Promise<SummaryResult
   let response;
   try {
     response = await client.messages.parse({
-    model: MODEL,
-    max_tokens: 16_000,
-    system: SYSTEM_PROMPT,
-    thinking: { type: "adaptive" },
-    output_config: {
-      effort: "medium",
-      format: zodOutputFormat(SummarySchema),
-    },
-    messages: [
-      {
-        role: "user",
-        content: buildUserMessage({ from, to, previousFrom, previousTo, entries }),
+      model: MODEL,
+      max_tokens: 16_000,
+      system: SYSTEM_PROMPT,
+      thinking: { type: "adaptive" },
+      output_config: {
+        effort: "medium",
+        format: zodOutputFormat(SummarySchema),
       },
+      messages: [
+        {
+          role: "user",
+          content: buildUserMessage({ from, to, previousFrom, previousTo, entries }),
+        },
       ],
     });
   } catch (cause) {

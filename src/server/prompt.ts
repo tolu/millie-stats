@@ -4,11 +4,11 @@
 // what the model is told shows up as a reviewable diff rather than as a
 // quietly different summary next month.
 
-import { SYMPTOMS } from "../symptoms";
 import { formatWeekday, rangeDays } from "../lib/date";
 import type { DayEntry } from "../lib/entry";
 import { isFlagged } from "../lib/entry";
 import { coverage } from "../lib/trends";
+import { SYMPTOMS } from "../symptoms";
 
 export const MILLIE_BACKGROUND = [
   "Millie er en border collie, født 28. januar 2018, kastrert.",

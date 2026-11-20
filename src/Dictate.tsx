@@ -1,6 +1,6 @@
 import { createSignal, onSettled, Show } from "solid-js";
 import { formatLong } from "./lib/date";
-import { startDictation, type Dictation } from "./lib/dictation";
+import { type Dictation, startDictation } from "./lib/dictation";
 import { EMPTY_TRANSCRIPT } from "./lib/transcript";
 
 /** Below this the microphone hears a room, not a voice. */

@@ -1,14 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { BASELINE_KG, formatKg, parseKg, weightView } from "./weight";
-import type { Measurement } from "./weight";
 import type { DayEntry } from "./entry";
+import type { Measurement } from "./weight";
+import { BASELINE_KG, formatKg, parseKg, weightView } from "./weight";
 
 const DAYS = ["2026-08-01", "2026-08-02", "2026-08-03", "2026-08-04", "2026-08-05"];
 
 function entries(byDay: Record<string, Partial<DayEntry>>): Map<string, DayEntry> {
-  return new Map(
-    Object.entries(byDay).map(([day, e]) => [day, { flags: {}, note: "", ...e }]),
-  );
+  return new Map(Object.entries(byDay).map(([day, e]) => [day, { flags: {}, note: "", ...e }]));
 }
 
 const kgs = (
@@ -19,26 +17,32 @@ const kgs = (
 
 describe("weightView", () => {
   it("interpolates evenly across a gap", () => {
-    expect(kgs(DAYS, entries({ "2026-08-01": { weight: 16 }, "2026-08-05": { weight: 17 } })))
-      .toEqual([16, 16.25, 16.5, 16.75, 17]);
+    expect(
+      kgs(DAYS, entries({ "2026-08-01": { weight: 16 }, "2026-08-05": { weight: 17 } })),
+    ).toEqual([16, 16.25, 16.5, 16.75, 17]);
   });
 
   it("interpolates across an uneven gap", () => {
-    expect(kgs(DAYS, entries({ "2026-08-02": { weight: 16 }, "2026-08-04": { weight: 18 } })))
-      .toEqual([16, 16, 17, 18, 18]);
+    expect(
+      kgs(DAYS, entries({ "2026-08-02": { weight: 16 }, "2026-08-04": { weight: 18 } })),
+    ).toEqual([16, 16, 17, 18, 18]);
   });
 
   it("extends flat past the first and last measurement, never continuing the slope", () => {
     // Projecting the downward trend past 08-04 would draw weight loss that was
     // never observed.
-    const series = kgs(DAYS, entries({ "2026-08-02": { weight: 18 }, "2026-08-04": { weight: 16 } }));
+    const series = kgs(
+      DAYS,
+      entries({ "2026-08-02": { weight: 18 }, "2026-08-04": { weight: 16 } }),
+    );
     expect(series?.[0]).toBe(18);
     expect(series?.[4]).toBe(16);
   });
 
   it("draws a flat line from a single measurement", () => {
-    expect(kgs(DAYS, entries({ "2026-08-03": { weight: 16.4 } })))
-      .toEqual([16.4, 16.4, 16.4, 16.4, 16.4]);
+    expect(kgs(DAYS, entries({ "2026-08-03": { weight: 16.4 } }))).toEqual([
+      16.4, 16.4, 16.4, 16.4, 16.4,
+    ]);
   });
 
   it("is null when she has never been weighed", () => {
@@ -100,8 +104,9 @@ describe("weightView with an anchor before the window", () => {
 
   it("ignores an anchor that is not actually before the window", () => {
     const bogus: Measurement = { day: "2026-08-04", kg: 99 };
-    expect(kgs(DAYS, entries({ "2026-08-01": { weight: 16 } }), bogus))
-      .toEqual([16, 16, 16, 16, 16]);
+    expect(kgs(DAYS, entries({ "2026-08-01": { weight: 16 } }), bogus)).toEqual([
+      16, 16, 16, 16, 16,
+    ]);
   });
 });
 

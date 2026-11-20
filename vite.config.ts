@@ -1,7 +1,7 @@
 import { execSync } from "node:child_process";
-import { defineConfig, type Plugin } from "vite";
-import solid from "@solidjs/vite-plugin";
 import { cloudflare } from "@cloudflare/vite-plugin";
+import solid from "@solidjs/vite-plugin";
+import { defineConfig, type Plugin } from "vite";
 
 /**
  * Builds the client environment before anything else.

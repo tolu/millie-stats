@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
-import { createWriteQueue } from "./writeQueue";
-import type { WriteState } from "./writeQueue";
 import { STALE_BUILD_MESSAGE } from "./staleBuild";
+import type { WriteState } from "./writeQueue";
+import { createWriteQueue } from "./writeQueue";
 
 // These assertions are about ordering, not latency, so every waitFor gets a
 // generous timeout: the default 1s can be missed on a loaded machine and turn
@@ -24,11 +24,14 @@ describe("createWriteQueue", () => {
     const second = deferred();
     const landed: string[] = [];
 
-    const queue = createWriteQueue<string>(async (value) => {
-      if (value === "a") await first.promise;
-      if (value === "b") await second.promise;
-      landed.push(value);
-    }, () => {});
+    const queue = createWriteQueue<string>(
+      async (value) => {
+        if (value === "a") await first.promise;
+        if (value === "b") await second.promise;
+        landed.push(value);
+      },
+      () => {},
+    );
 
     queue.push("a");
     queue.push("b");
@@ -43,7 +46,10 @@ describe("createWriteQueue", () => {
 
   it("reports saving then saved", async () => {
     const states: WriteState[] = [];
-    const queue = createWriteQueue<string>(async () => {}, (s) => states.push(s));
+    const queue = createWriteQueue<string>(
+      async () => {},
+      (s) => states.push(s),
+    );
     queue.push("x");
     await vi.waitFor(() => expect(states).toContain("saved"), { timeout: 5000 });
     expect(states[0]).toBe("saving");
@@ -52,8 +58,9 @@ describe("createWriteQueue", () => {
   it("stays in saving until the last queued write lands", async () => {
     const gate = deferred();
     const states: WriteState[] = [];
-    const queue = createWriteQueue<string>(async () => await gate.promise, (s) =>
-      states.push(s),
+    const queue = createWriteQueue<string>(
+      async () => await gate.promise,
+      (s) => states.push(s),
     );
     queue.push("x");
     queue.push("y");
@@ -98,10 +105,13 @@ describe("createWriteQueue", () => {
     const gate = deferred();
     const landed: string[] = [];
     const states: WriteState[] = [];
-    const queue = createWriteQueue<string>(async (v) => {
-      await gate.promise;
-      landed.push(v);
-    }, (s) => states.push(s));
+    const queue = createWriteQueue<string>(
+      async (v) => {
+        await gate.promise;
+        landed.push(v);
+      },
+      (s) => states.push(s),
+    );
 
     queue.push("note typed just before navigating");
     queue.detach();

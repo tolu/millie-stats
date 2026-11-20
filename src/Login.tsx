@@ -50,18 +50,13 @@ export default function Login(props: { onSuccess: () => void; configured: boolea
         }
       >
         <form onSubmit={(e) => void submit(e)}>
-        <label>
-          <span>Passord</span>
-          <input
-            type="password"
-            name="passphrase"
-            autocomplete="current-password"
-            required
-          />
-        </label>
-        <button type="submit" disabled={busy()}>
-          {busy() ? "Sjekker…" : "Logg inn"}
-        </button>
+          <label>
+            <span>Passord</span>
+            <input type="password" name="passphrase" autocomplete="current-password" required />
+          </label>
+          <button type="submit" disabled={busy()}>
+            {busy() ? "Sjekker…" : "Logg inn"}
+          </button>
           <Show when={failed()}>
             <p class="login-error" role="alert">
               Feil passord.

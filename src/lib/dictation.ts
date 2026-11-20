@@ -16,9 +16,9 @@ import {
   EMPTY_TRANSCRIPT,
   parseServerMessage,
   reduceTranscript,
-  transcriptText,
   type ServerEvent,
   type Transcript,
+  transcriptText,
 } from "./transcript";
 import { TRANSCRIBE_MODEL } from "./voice";
 
@@ -106,7 +106,9 @@ export function startDictation(options: DictationOptions) {
   function sendAudio(data: string) {
     if (finished) return;
     if (ready && socket) {
-      socket.send(JSON.stringify({ realtimeInput: { audio: { data, mimeType: "audio/pcm;rate=16000" } } }));
+      socket.send(
+        JSON.stringify({ realtimeInput: { audio: { data, mimeType: "audio/pcm;rate=16000" } } }),
+      );
     } else {
       outbox.push(data);
     }
@@ -182,7 +184,10 @@ export function startDictation(options: DictationOptions) {
     ws.onclose = (event) => {
       if (finished) return;
       if (endSent) finish();
-      else fail(`Forbindelsen til Gemini ble brutt (${event.code}${event.reason ? `: ${event.reason}` : ""}).`);
+      else
+        fail(
+          `Forbindelsen til Gemini ble brutt (${event.code}${event.reason ? `: ${event.reason}` : ""}).`,
+        );
     };
   }
 

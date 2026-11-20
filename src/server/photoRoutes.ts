@@ -14,12 +14,7 @@
 // document shell, and Node cannot resolve it.
 
 import { isDay, osloDay } from "../lib/date";
-import {
-  MAX_PHOTOS_PER_DAY,
-  MAX_UPLOAD_BYTES,
-  parsePhotoPath,
-  photoKey,
-} from "../lib/photo";
+import { MAX_PHOTOS_PER_DAY, MAX_UPLOAD_BYTES, parsePhotoPath, photoKey } from "../lib/photo";
 import { countPhotos, deletePhoto, ensureDay, insertPhoto } from "./photos";
 
 /** No real photo is this big on a side; anything larger is a lie or a bug. */

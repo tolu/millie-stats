@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { dayFromSearch, routeFromSearch, searchForRoute } from "./url";
 import type { Route } from "./url";
+import { dayFromSearch, routeFromSearch, searchForRoute } from "./url";
 
 const TODAY = "2026-08-26";
 

@@ -55,8 +55,7 @@ const MAX_KG = 200;
 
 /** Kilos are entered by hand and read back out of JSON; both can be junk. */
 export function isWeight(value: unknown): value is number {
-  return typeof value === "number" && Number.isFinite(value) &&
-    value >= MIN_KG && value <= MAX_KG;
+  return typeof value === "number" && Number.isFinite(value) && value >= MIN_KG && value <= MAX_KG;
 }
 
 /** Scales read to a gram; storing more decimals than that is false precision. */
@@ -93,7 +92,12 @@ export function withWorkout(entry: DayEntry, workoutId: string, done: boolean): 
   if (Object.keys(workouts).length === 0) {
     // Deleted rather than left empty, so a day whose last tick was cleared and
     // a day that never had one serialize identically.
-    const next: { flags: DayEntry["flags"]; note: string; weight?: number; workouts?: Readonly<Record<string, true>> } = { ...entry };
+    const next: {
+      flags: DayEntry["flags"];
+      note: string;
+      weight?: number;
+      workouts?: Readonly<Record<string, true>>;
+    } = { ...entry };
     delete next.workouts;
     return next;
   }
@@ -102,8 +106,12 @@ export function withWorkout(entry: DayEntry, workoutId: string, done: boolean): 
 
 /** True when the day carries no information at all. */
 export function isBlank(entry: DayEntry): boolean {
-  return entry.note.trim() === "" && Object.keys(entry.flags).length === 0 &&
-    entry.weight === undefined && workoutsDone(entry).length === 0;
+  return (
+    entry.note.trim() === "" &&
+    Object.keys(entry.flags).length === 0 &&
+    entry.weight === undefined &&
+    workoutsDone(entry).length === 0
+  );
 }
 
 /** Drops false flags and trims the note, so stored rows stay minimal. */
@@ -114,7 +122,12 @@ export function serializeEntry(entry: DayEntry): string {
   }
   // The weight key is omitted entirely when unset, so a day without one
   // serializes byte-for-byte as it did before weights existed.
-  const out: { flags: typeof flags; note: string; weight?: number; workouts?: Record<string, true> } = {
+  const out: {
+    flags: typeof flags;
+    note: string;
+    weight?: number;
+    workouts?: Record<string, true>;
+  } = {
     flags,
     note: entry.note.trim(),
   };
@@ -150,7 +163,12 @@ export function parseEntry(json: string): DayEntry {
   // bad row must not take the journal down.
   const rawWeight = record["weight"];
   const workouts = onlyTrue(record["workouts"]);
-  const out: { flags: typeof flags; note: string; weight?: number; workouts?: Record<string, true> } = {
+  const out: {
+    flags: typeof flags;
+    note: string;
+    weight?: number;
+    workouts?: Record<string, true>;
+  } = {
     flags,
     note,
   };

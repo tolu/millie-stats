@@ -12,8 +12,8 @@
 // chart invents weight loss that never happened.
 
 import { diffDays } from "./date";
-import { isWeight, roundKg } from "./entry";
 import type { DayEntry } from "./entry";
+import { isWeight, roundKg } from "./entry";
 
 /**
  * Her normal weight, the line everything is read against. Fixed on purpose:

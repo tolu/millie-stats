@@ -22,7 +22,7 @@ function buildClientFirst(): Plugin {
     buildApp: {
       order: "pre",
       async handler(builder) {
-        const client = builder.environments["client"];
+        const client = builder.environments.client;
         if (client && !client.isBuilt) await builder.build(client);
       },
     },

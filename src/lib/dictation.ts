@@ -82,7 +82,7 @@ export function startDictation(options: DictationOptions) {
   }
 
   function releaseAudio() {
-    stream?.getTracks().forEach((track) => track.stop());
+    for (const track of stream?.getTracks() ?? []) track.stop();
     stream = null;
     worklet?.port.close();
     worklet = null;
@@ -145,7 +145,7 @@ export function startDictation(options: DictationOptions) {
     await context.audioWorklet.addModule(WORKLET_URL);
     const opened = await microphone();
     if (finished || ending) {
-      opened.getTracks().forEach((track) => track.stop());
+      for (const track of opened.getTracks()) track.stop();
       return;
     }
     stream = opened;

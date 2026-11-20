@@ -11,7 +11,10 @@
 //  - one workout, three times a week from eight weeks back, ticked on about
 //    half the days so the weekly bars show both hit and missed weeks
 let seed = 20260826;
-const rnd = () => (seed = (seed * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff;
+const rnd = () => {
+  seed = (seed * 1103515245 + 12345) & 0x7fffffff;
+  return seed / 0x7fffffff;
+};
 
 const END = process.argv[2] ?? "2026-08-26";
 const DAYS = 120;
@@ -33,9 +36,9 @@ for (let i = DAYS - 1; i >= 0; i--) {
   const naggingBase = 0.15;
   const recentBoost = daysFromEnd < 21 ? 0.45 : 0;
   const flags = {};
-  if (rnd() < naggingBase + recentBoost) flags["nagging"] = true;
-  if (rnd() < 0.22) flags["gnikking"] = true;
-  if (rnd() < 0.18) flags["lydsensitiv"] = true;
+  if (rnd() < naggingBase + recentBoost) flags.nagging = true;
+  if (rnd() < 0.22) flags.gnikking = true;
+  if (rnd() < 0.18) flags.lydsensitiv = true;
   if (rnd() < 0.08) flags["slow-walk"] = true;
 
   const notes = [

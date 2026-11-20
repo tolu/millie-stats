@@ -152,17 +152,17 @@ export function parseEntry(json: string): DayEntry {
 
   const record = raw as Record<string, unknown>;
   const flags: Record<string, boolean> = {};
-  const rawFlags = record["flags"];
+  const rawFlags = record.flags;
   if (typeof rawFlags === "object" && rawFlags !== null) {
     for (const [id, on] of Object.entries(rawFlags as Record<string, unknown>)) {
       if (on === true) flags[id] = true;
     }
   }
-  const note = typeof record["note"] === "string" ? record["note"] : "";
+  const note = typeof record.note === "string" ? record.note : "";
   // A junk weight is dropped rather than thrown on, same as a junk flag: one
   // bad row must not take the journal down.
-  const rawWeight = record["weight"];
-  const workouts = onlyTrue(record["workouts"]);
+  const rawWeight = record.weight;
+  const workouts = onlyTrue(record.workouts);
   const out: {
     flags: typeof flags;
     note: string;

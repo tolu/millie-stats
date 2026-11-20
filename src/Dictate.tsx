@@ -131,16 +131,16 @@ export default function Dictate(props: {
           <span class="ring" />
           <span class="ring" />
           <span class="ring" />
-          <svg class="core" viewBox="0 0 24 24">
+          <svg class="core" viewBox="0 0 24 24" aria-hidden="true">
             <Mic />
           </svg>
-          <svg class="spark" viewBox="0 0 24 24">
+          <svg class="spark" viewBox="0 0 24 24" aria-hidden="true">
             <path d={STAR} />
           </svg>
-          <svg class="spark" viewBox="0 0 24 24">
+          <svg class="spark" viewBox="0 0 24 24" aria-hidden="true">
             <path d={STAR} />
           </svg>
-          <svg class="spark" viewBox="0 0 24 24">
+          <svg class="spark" viewBox="0 0 24 24" aria-hidden="true">
             <path d={STAR} />
           </svg>
         </div>

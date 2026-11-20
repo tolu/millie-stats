@@ -78,7 +78,7 @@ export default function Trends(props: Props) {
     >
       <div class="trends-head">
         <h2 id="trends-heading">Siste {span()} dager</h2>
-        <div class="window-toggle" role="group" aria-label="Lengde på perioden">
+        <fieldset class="window-toggle" aria-label="Lengde på perioden">
           <For each={WINDOWS}>
             {(size) => (
               <label>
@@ -92,7 +92,7 @@ export default function Trends(props: Props) {
               </label>
             )}
           </For>
-        </div>
+        </fieldset>
       </div>
 
       <Loading fallback={<p class="muted">laster trender…</p>}>

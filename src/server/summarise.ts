@@ -88,9 +88,9 @@ export async function summarise(from: string, to: string): Promise<SummaryResult
   }
 
   const client = new Anthropic({ apiKey: ANTHROPIC_API_KEY });
-  let response;
+  let parsed: z.infer<typeof SummarySchema> | null;
   try {
-    response = await client.messages.parse({
+    const response = await client.messages.parse({
       model: MODEL,
       max_tokens: 16_000,
       system: SYSTEM_PROMPT,
@@ -106,13 +106,13 @@ export async function summarise(from: string, to: string): Promise<SummaryResult
         },
       ],
     });
+    parsed = response.parsed_output;
   } catch (cause) {
     // A bad key, a rate limit or an outage are all things the person can act
     // on, so the message is worth passing through.
     return { ok: false, message: failureMessage(cause) };
   }
 
-  const parsed = response.parsed_output;
   if (!parsed) return { ok: false, message: "Fikk ikke et gyldig svar fra modellen" };
 
   // Persisted immediately: a summary that only lives in the page is lost on

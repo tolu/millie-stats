@@ -242,6 +242,7 @@ export default function Day(props: {
         <button type="button" class="current" onClick={() => picker.showPicker()}>
           {formatLong(target())}
         </button>
+        {/* biome-ignore lint/a11y/noAriaHiddenOnFocusable: the button above is the control; this input only gives showPicker() a native picker to open, so it stays out of the tab order and is not announced twice */}
         <input
           ref={picker}
           type="date"

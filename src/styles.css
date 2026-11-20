@@ -661,6 +661,7 @@ main[aria-busy="true"],
 @media (prefers-reduced-motion: reduce) {
   *,
   *::after {
+    /* biome-ignore lint/complexity/noImportantStyles: a reduced-motion override has to beat every component's own transition; this is what !important is for */
     transition-duration: 0.01ms !important;
   }
 }
@@ -819,6 +820,9 @@ main[aria-busy="true"],
 /* ---------- window toggle ---------- */
 
 .window-toggle {
+  /* A <fieldset>: drop the margin and min-content floor it brings. */
+  margin: 0;
+  min-inline-size: 0;
   display: flex;
   gap: 0.25rem;
   padding: 0.25rem;

@@ -1,6 +1,6 @@
 # Working on this repo
 
-A private symptom journal for Millie, a border collie. Solid 2 RC on Cloudflare
+A private symptom journal for Millie, a border collie. Solid 2 on Cloudflare
 Workers with D1, plus vet-facing summaries from Claude. See README.md for what
 it is and why; this file is what you need to change it safely.
 
@@ -37,27 +37,29 @@ npm run dev:worker   # the BUILT worker under wrangler dev
 npm run deploy       # build + deploy; the only way this app is deployed
 ```
 
-**Changing a server module means restarting the dev server.** Vite hot-reloads
-the client, but the workerd side keeps the old bundle, so edits to `db.ts`,
-`entry.ts` or anything else a server function imports keep running the previous
-version. It fails silently and looks exactly like a logic bug — a new field
-simply never arrives on the client.
+Server modules reload without a restart since `@solidjs/vite-plugin` 3.0 —
+an edit to `db.ts` reaches the next call. Before it, workerd kept the old
+bundle and a new field simply never arrived; if that symptom comes back,
+restart before debugging the logic. A change to `wrangler.jsonc` still needs
+one.
 
 Never start a dev server with Bash — use the browser-preview tooling
-(`.claude/launch.json` defines the `dev` config). Verify UI changes by driving
-the page and reading the DOM, not by asking the user to look.
+(`.claude/launch.json` defines `dev`, and `worker` for the built worker on
+8787). Verify UI changes by driving the page and reading the DOM, not by asking
+the user to look.
 
-## Solid 2 RC — assume your training is wrong here
+## Solid 2 — assume your training is wrong here
 
-Solid 2 is a release candidate and its API differs from every Solid 1 example
-you have seen. These all cost real debugging time already:
+Solid 2's API differs from every Solid 1 example you have seen, and most
+writing about it describes a release candidate. These all cost real debugging
+time already:
 
 | Habit | Reality in Solid 2 |
 |---|---|
 | `createResource` | Gone. A `createMemo` returning a promise suspends downstream. |
 | `createEffect(fn)` | Needs **two** args: `createEffect(compute, effect)`. One arg is a type error since rc.6, so `tsc` catches it before the page does. |
 | `<Suspense>` / `<ErrorBoundary>` | `<Loading>` / `<Errored>` |
-| `classList={{ a: cond }}` | Removed. Compute the class string. |
+| `classList={{ a: cond }}` | A compile error. `class` takes an object or array: `class={["a", { b: cond }]}`. |
 | `aria-expanded={bool}` | Must be a string: `cond ? "true" : "false"` |
 | JSX types from `solid-js` | `jsxImportSource: "@solidjs/web"`; `JSX` type comes from `@solidjs/web` |
 | Nested `<Show>` narrowing | Its callback does not re-run while the outer condition stays truthy. Use `<Switch>`/`<Match>` for multi-state views. |

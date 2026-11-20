@@ -48,7 +48,7 @@ The four, in the owners' own words:
 
 ## Stack
 
-- **Solid 2.0 RC**, *client start mode* — `solid({ start: true })`. SolidStart is
+- **Solid 2.0**, *client start mode* — `solid({ start: true })`. SolidStart is
   retired; start mode replaces it. `@solidjs/start` on npm is the **old**
   metaframework on Solid 1.x and is not this.
 - **Cloudflare Workers** + Static Assets. Pages is in maintenance mode.
@@ -97,7 +97,7 @@ src/Masthead.tsx       the shared header and the page toggle
 src/worker.ts          auth gate, server-function dispatch, document shell
 ```
 
-Agent-facing notes — the Solid 2 RC API deltas, the invariants and the
+Agent-facing notes — the Solid 2 API deltas, the invariants and the
 gotchas — live in [CLAUDE.md](CLAUDE.md).
 
 ## Running it

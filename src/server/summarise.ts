@@ -17,7 +17,7 @@ import { buildUserMessage, SYSTEM_PROMPT } from "./prompt";
 // faster on a button you press and wait for. Haiku was rejected — it supports
 // neither adaptive thinking nor effort, and the one thing this prompt must not
 // get wrong is reading IKKE FØRT gaps as good days.
-const MODEL = "claude-sonnet-5";
+const MODEL = "claude-sonnet-5-5";
 
 /** A period longer than this is not a summary, it is a data dump. */
 const MAX_PERIOD_DAYS = 366;

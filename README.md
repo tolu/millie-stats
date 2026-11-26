@@ -58,7 +58,7 @@ The four, in the owners' own words:
   everything else. Resized to 1600px client-side before upload — a phone photo
   is 2–5 MB, and that is a ten-second upload on mobile data for something viewed
   400px wide.
-- **claude-sonnet-5** for summaries, adaptive thinking, medium effort, structured
+- **claude-sonnet-5-5** for summaries, adaptive thinking, medium effort, structured
   output via zod. Input is ~900–3,500 tokens; output dominates the cost, so a
   summary runs about 2–3 cents.
 - TypeScript 7, `erasableSyntaxOnly` — Node-24-strippable, no enums.
